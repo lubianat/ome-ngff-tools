@@ -1,73 +1,70 @@
-
-- feature_test: 
-    - author: multiple
-    - date: 26-01-26 # Example
-    - notes: "Sample test for testing one feature over many different tools"
-    - features: 
-        z_downsample:
-              ome_zarr_version: 0.4
-              sample_url: https://minio-dev.openmicroscopy.org/idr/v0.4/idr0077/9836832_z_dtype_fix.zarr
-              sample_name: 9836832.zarr
-    - tools: 
-        avivator
-        vizarr: 
-          notes: April 2025 
-        Vol-E
-        BigDataViewer
-          notes: "Jar versions include \
-          bigdataviewer_fiji-6.4.1.jar, bigdataviewer-core-10.6.4, bigdataviewer-image-loaders-0.9.0, \
-          bigdataviewer-n5-1.0.2.jar."
-mobie-viewer-fiji v6.3.1, mobie-io v4.0.3
-      
-        MoBIE:
-         additional_versions: 
-          mobie-viewer-fiji: v6.3.1
-          mobie-io: v4.0.3
-        vtk-itk-viewer: "?"
-        neuroglancer: "?"
-        WEBKNOSSOS: 
-          version:  24.11.0.
-        omero_zarr_reader:
-          version: 
-        microscopy_nodes:
-          additional_versions:
-              blender: 4.4.1 
-              microscopy_nodes: 2.2.0.=
-        napari: 
-            version:  0.5.6 
-            additional_versions:
-               napari-ome-zarr: 0.6.1               
-               ome-zarr: 0.10.3. 
-    - results: 
-          - feature: z_downsample
-              - tools:
-                  avivator:
-                      supported: no
-                      opens: no 
-                  vizarr:
-                    opens: no
-                    supported: no
-                    notes: "Vizarr expects the same number of Z-sections for each pyramid resolution"
-                    issue_url: https://github.com/hms-dbmi/vizarr/issues/60
-                  Vol-E:
-                    supported: yes
-                  napari:
-                    notes: "Image appears to load and display OK, but very quickly crashes on zooming etc."
-                  BigDataViewer:
-                    supported: yes
-                  MoBIE:
-                    supported: yes
-                  vtk-itk-viewer:
-                    supported: yes
-                  neuroglancer:
-                    supported: yes
-                  WEBKNOSSOS:
-                    supported: yes
-                    viewer_url: https://webknossos.org/datasets/308ffc5547d41748/9836832_z_dtype_fix.zarr/view?token=vO-L4B5wwTea_SCWegbylQ
-                  OMERO:
-                    supported: no
-                    opens: no
-                  Microscopy Nodes:
-                    supported: no
-                    opens: yes
-                    notes: "Z-pixel size is read without the downsampling. Can be adjusted to the downsampled value with the UI"
+feature_test:
+  author: multiple
+  date: 2026-01-26
+  notes: "Sample test for testing one feature over many different tools"
+  features:
+    z_downsample:
+      name: Z downsample
+      ome_zarr_version: 0.4
+      sample_url: https://minio-dev.openmicroscopy.org/idr/v0.4/idr0077/9836832_z_dtype_fix.zarr
+      sample_name: 9836832.zarr
+  tools:
+    avivator: {}
+    vizarr:
+      version: "April 2025"
+    Vol-E: {}
+    BigDataViewer:
+      notes: "Jar versions include bigdataviewer_fiji-6.4.1.jar, bigdataviewer-core-10.6.4, bigdataviewer-image-loaders-0.9.0, bigdataviewer-n5-1.0.2.jar."
+    MoBIE:
+      additional_versions:
+        mobie-viewer-fiji: v6.3.1
+        mobie-io: v4.0.3
+    vtk-itk-viewer: {}
+    neuroglancer: {}
+    WEBKNOSSOS:
+      version: 24.11.0
+    OMERO:
+      additional_versions:
+        ZarrReader: 0.2.0
+    Microscopy Nodes:
+      additional_versions:
+        blender: 4.4.1
+        microscopy_nodes: 2.2.0
+    napari:
+      version: 0.5.6
+      additional_versions:
+        napari-ome-zarr: 0.6.1
+        ome-zarr: 0.10.3
+  layout: feature_by_tools
+  results:
+    z_downsample:
+      avivator:
+        supported: no
+        opens: no
+      vizarr:
+        supported: no
+        opens: no
+        notes: "Vizarr expects the same number of Z-sections for each pyramid resolution"
+        issue_url: https://github.com/hms-dbmi/vizarr/issues/60
+      Vol-E:
+        supported: yes
+      napari:
+        notes: "Image appears to load and display OK, but very quickly crashes on zooming etc."
+      BigDataViewer:
+        supported: yes
+      MoBIE:
+        supported: yes
+      vtk-itk-viewer:
+        supported: yes
+      neuroglancer:
+        supported: yes
+      WEBKNOSSOS:
+        supported: yes
+        viewer_url: https://webknossos.org/datasets/308ffc5547d41748/9836832_z_dtype_fix.zarr/view?token=vO-L4B5wwTea_SCWegbylQ
+      OMERO:
+        supported: no
+        opens: no
+      Microscopy Nodes:
+        supported: no
+        opens: yes
+        notes: "Z-pixel size is read without the downsampling. Can be adjusted to the downsampled value with the UI"

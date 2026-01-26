@@ -1,16 +1,135 @@
-
-- feature_test: 
-    - author: multiple
-    - date: 26-01-26 # Example
-    - notes: "Sample test for testing many features in a single tool"
-    - features: 
-
-    - tools: 
-        napari: 
-            version:  0.5.6 
-            additional_versions:
-               napari-ome-zarr: 0.6.1               
-               ome-zarr: 0.10.3. 
-    - results: 
-          - tool: napari
-              - features:
+feature_test:
+  author: multiple
+  date: 2026-01-26
+  notes: "Sample test for testing many features in a single tool"
+  features:
+    z_downsample:
+      name: Z downsample
+      ome_zarr_version: 0.4
+      sample_url: https://minio-dev.openmicroscopy.org/idr/v0.4/idr0077/9836832_z_dtype_fix.zarr
+      sample_name: 9836832.zarr
+    omero_info:
+      name: omero info
+      ome_zarr_version: 0.4
+      sample_url: https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0062A/6001240.zarr
+      sample_name: 6001240.zarr
+    multiscales_downsampling_not_2:
+      name: multiscales downsampling not=2
+      ome_zarr_version: 0.4
+      sample_url: https://minio-dev.openmicroscopy.org/idr/v0.4/idr0082/9846318.zarr/0
+      sample_name: 9846318.zarr/0
+    axes_v0_3:
+      name: axes (v0.3)
+      ome_zarr_version: 0.3
+      sample_url: https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.3/idr0079A/9836998.zarr
+      sample_name: 9836998.zarr
+    axes_v0_4:
+      name: axes (v0.4)
+      ome_zarr_version: 0.4
+      sample_url: https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0062A/6001240.zarr
+      sample_name: 6001240.zarr
+    labels:
+      name: labels
+      ome_zarr_version: 0.4
+      sample_url: https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0052A/5514375.zarr
+      sample_name: 5514375.zarr
+    hcs_plate:
+      name: HCS plate
+      ome_zarr_version: 0.4
+      sample_url: https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0001A/2551.zarr
+      sample_name: idr0001
+    bioformats2raw_layout:
+      name: bioformats2raw.layout
+      sample_url: https://minio-dev.openmicroscopy.org/idr/Testing/sample_files.zarr
+      sample_name: sample_files.zarr
+    multiple_multiscales:
+      name: multiple 'multiscales'
+      ome_zarr_version: 0.4
+      sample_url: https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0050A/4995115.zarr
+      sample_name: 4995115.zarr
+    scale_within_coordinate_transformations_on_datasets_v0_4:
+      name: scale within coordinateTransformations on datasets (v0.4)
+      ome_zarr_version: 0.4
+      sample_url: https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0062A/6001240.zarr
+      sample_name: 6001240.zarr
+    translation_within_coordinate_transformations_on_datasets_v0_4:
+      name: translation within coordinateTransformations on datasets (v0.4)
+      ome_zarr_version: 0.4
+      sample_url: https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0101A/13457537.zarr
+      sample_name: 13457537.zarr
+      sample_html: "translate onto <a href=\"https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0101A/13457227.zarr\">13457227.zarr</a>"
+    scale_within_coordinate_transformations_on_multiscales_v0_4:
+      name: scale within coordinateTransformations on multiscales (v0.4)
+      ome_zarr_version: 0.4
+      sample_url: https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0101A/13457539.zarr
+      sample_name: 13457539.zarr
+    translation_within_coordinate_transformations_on_multiscales_v0_4:
+      name: translation within coordinateTransformations on multiscales (v0.4)
+      ome_zarr_version: 0.4
+      sample_url: https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0101A/13457539.zarr
+      sample_name: 13457539.zarr
+      sample_html: "translate onto <a href=\"https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0101A/13457227.zarr\">13457227.zarr</a>"
+    overlay_multiple_images:
+      name: overlay multiple images
+      notes: "Open 13457227.zarr and 13457537.zarr together to assess overlay."
+    multiple_channels:
+      name: multiple Channels
+      ome_zarr_version: 0.4
+      sample_url: https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0101A/13457227.zarr
+      sample_name: 13457227.zarr
+    multiple_time_points:
+      name: multiple Time-points
+      ome_zarr_version: 0.4
+      sample_url: https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0101A/13457227.zarr
+      sample_name: 13457227.zarr
+  tools:
+    napari:
+      version: 0.5.6
+      additional_versions:
+        napari-ome-zarr: 0.6.1
+        ome-zarr: 0.10.3
+  layout: tool_by_features
+  results:
+    napari:
+      z_downsample:
+        notes: "Image appears to load and display OK, but very quickly crashes on zooming etc."
+      omero_info:
+        supported: yes
+        opens: yes
+      multiscales_downsampling_not_2:
+        supported: yes
+      axes_v0_3:
+        supported: yes
+      axes_v0_4:
+        supported: yes
+      labels:
+        supported: yes
+      hcs_plate:
+        supported: yes
+        notes: "Plate appears to load and display OK, but crashes on zooming in."
+      bioformats2raw_layout:
+        supported: no
+        opens: no
+        issue_url: https://github.com/ome/napari-ome-zarr/issues/71
+      multiple_multiscales:
+        supported: no
+        opens: yes
+      scale_within_coordinate_transformations_on_datasets_v0_4:
+        supported: yes
+      translation_within_coordinate_transformations_on_datasets_v0_4:
+        supported: yes
+      scale_within_coordinate_transformations_on_multiscales_v0_4:
+        supported: no
+        opens: yes
+        issue_url: https://github.com/ome/napari-ome-zarr/issues/73
+      translation_within_coordinate_transformations_on_multiscales_v0_4:
+        supported: no
+        opens: yes
+        issue_url: https://github.com/ome/napari-ome-zarr/issues/73
+      overlay_multiple_images:
+        supported: yes
+        opens: yes
+      multiple_channels:
+        supported: yes
+      multiple_time_points:
+        supported: yes
