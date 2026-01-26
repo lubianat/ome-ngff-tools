@@ -1,0 +1,3 @@
+- name: Z downsample
+  slug: z_downsample
+  description: Does the viewer handle image pyramids which have been down-sampled in the Z axis?

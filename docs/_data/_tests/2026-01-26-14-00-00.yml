@@ -1,0 +1,47 @@
+
+- feature_test: 
+    - author: multiple
+    - date: 26-01-26 # Example
+    - notes:
+    - features: 
+        z_downsample:
+              ome_zarr_version: 0.4
+              sample_url: https://minio-dev.openmicroscopy.org/idr/v0.4/idr0077/9836832_z_dtype_fix.zarr
+              sample_name: 9836832.zarr
+    - tools: 
+        avivator: 
+            version: "?"
+            notes: "" 
+    - results: 
+          - feature: z_downsample
+              - tools:
+                  avivator:
+                      supported: no
+                      opens: no 
+                  vizarr:
+                    opens: no
+                    supported: no
+                    notes: "Vizarr expects the same number of Z-sections for each pyramid resolution"
+                    issue_url: https://github.com/hms-dbmi/vizarr/issues/60
+                  Vol-E:
+                    supported: yes
+                  napari:
+                    notes: "Image appears to load and display OK, but very quickly crashes on zooming etc."
+                  BigDataViewer:
+                    supported: yes
+                  MoBIE:
+                    supported: yes
+                  vtk-itk-viewer:
+                    supported: yes
+                  neuroglancer:
+                    supported: yes
+                  WEBKNOSSOS:
+                    supported: yes
+                    viewer_url: https://webknossos.org/datasets/308ffc5547d41748/9836832_z_dtype_fix.zarr/view?token=vO-L4B5wwTea_SCWegbylQ
+                  OMERO:
+                    supported: no
+                    opens: no
+                  Microscopy Nodes:
+                    supported: no
+                    opens: yes
+                    notes: "Z-pixel size is read without the downsampling. Can be adjusted to the downsampled value with the UI"
