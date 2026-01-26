@@ -2,16 +2,42 @@
 - feature_test: 
     - author: multiple
     - date: 26-01-26 # Example
-    - notes:
+    - notes: "Sample test for testing one feature over many different tools"
     - features: 
         z_downsample:
               ome_zarr_version: 0.4
               sample_url: https://minio-dev.openmicroscopy.org/idr/v0.4/idr0077/9836832_z_dtype_fix.zarr
               sample_name: 9836832.zarr
     - tools: 
-        avivator: 
-            version: "?"
-            notes: "" 
+        avivator
+        vizarr: 
+          notes: April 2025 
+        Vol-E
+        BigDataViewer
+          notes: "Jar versions include \
+          bigdataviewer_fiji-6.4.1.jar, bigdataviewer-core-10.6.4, bigdataviewer-image-loaders-0.9.0, \
+          bigdataviewer-n5-1.0.2.jar."
+mobie-viewer-fiji v6.3.1, mobie-io v4.0.3
+      
+        MoBIE:
+         additional_versions: 
+          mobie-viewer-fiji: v6.3.1
+          mobie-io: v4.0.3
+        vtk-itk-viewer: "?"
+        neuroglancer: "?"
+        WEBKNOSSOS: 
+          version:  24.11.0.
+        omero_zarr_reader:
+          version: 
+        microscopy_nodes:
+          additional_versions:
+              blender: 4.4.1 
+              microscopy_nodes: 2.2.0.=
+        napari: 
+            version:  0.5.6 
+            additional_versions:
+               napari-ome-zarr: 0.6.1               
+               ome-zarr: 0.10.3. 
     - results: 
           - feature: z_downsample
               - tools:

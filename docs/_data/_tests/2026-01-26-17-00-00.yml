@@ -1,0 +1,17 @@
+
+- feature_test: 
+    - author: multiple
+    - date: 26-01-26 # Example
+    - notes: "Sample test for 3 features in 3 tools"
+    - features: 
+
+    - tools: 
+        napari: 
+            version:  0.5.6 
+            additional_versions:
+               napari-ome-zarr: 0.6.1               
+               ome-zarr: 0.10.3. 
+    - results: 
+          - tool: napari
+              - features:
+        
