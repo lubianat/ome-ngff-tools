@@ -210,6 +210,7 @@ function buildHeader(viewerOrder, viewerMap, toolRefIndex) {
 
 function buildRows(entries, viewerOrder, viewerMap, featureRefIndex) {
     const tbody = document.getElementById("feature-table-body");
+    const tooltip = ensureHoverTooltip();
     tbody.innerHTML = "";
 
     entries.forEach((entry) => {
@@ -222,11 +223,14 @@ function buildRows(entries, viewerOrder, viewerMap, featureRefIndex) {
         const featureCell = document.createElement("td");
         featureCell.classList.add("feature");
 
+        const featureLabel = document.createElement("div");
+        featureLabel.classList.add("feature-label");
+
         const name = mergedFeature.name || entry.slug;
         const featureName = document.createElement("span");
         featureName.classList.add("feature-name");
         featureName.textContent = name;
-        featureCell.appendChild(featureName);
+        featureLabel.appendChild(featureName);
 
         const description = mergedFeature.description;
         const featureInstructions = normalizeInstructions(
@@ -239,8 +243,9 @@ function buildRows(entries, viewerOrder, viewerMap, featureRefIndex) {
             if (description) tooltipParts.push(description);
             if (featureInstructions) tooltipParts.push("How to test:\n" + featureInstructions);
             infoIcon.title = tooltipParts.join("\n\n");
-            featureCell.appendChild(infoIcon);
+            featureLabel.appendChild(infoIcon);
         }
+        featureCell.appendChild(featureLabel);
         tr.appendChild(featureCell);
 
         // Sample Data Column
@@ -326,6 +331,29 @@ function buildRows(entries, viewerOrder, viewerMap, featureRefIndex) {
 
             cell.appendChild(iconRow);
             tr.appendChild(cell);
+
+            const cellMeta = entry.toolMeta ? entry.toolMeta[viewerId] : null;
+            const toolInfo = cellMeta && cellMeta.tool ? cellMeta.tool : null;
+            const infoPayload = toolInfo || { id: viewer.id, note: "No tool metadata for this cell." };
+            const formatted = JSON.stringify(infoPayload, null, 2);
+
+            const infoIcon = document.createElement("span");
+            infoIcon.className = "cell-info-icon";
+            infoIcon.setAttribute("aria-label", "Show tool version details");
+            infoIcon.innerHTML = '<i class="fas fa-question-circle"></i>';
+            iconRow.appendChild(infoIcon);
+
+            infoIcon.addEventListener("mouseenter", (event) => {
+                updateHoverTooltip(tooltip, formatted);
+                positionHoverTooltip(tooltip, event.clientX, event.clientY);
+                tooltip.classList.add("visible");
+            });
+            infoIcon.addEventListener("mousemove", (event) => {
+                positionHoverTooltip(tooltip, event.clientX, event.clientY);
+            });
+            infoIcon.addEventListener("mouseleave", () => {
+                tooltip.classList.remove("visible");
+            });
         });
 
         tbody.appendChild(tr);
@@ -420,6 +448,7 @@ function aggregateTestResults(testData) {
 
         const features = testWrapper.features || {};
         const results = normalizeResults(testWrapper.results, features);
+        const tools = testWrapper.tools || {};
 
         // Get all feature keys from this test
         const featureKeys = new Set([...Object.keys(features), ...Object.keys(results)]);
@@ -429,7 +458,8 @@ function aggregateTestResults(testData) {
                 featureMap.set(slug, {
                     slug,
                     feature: features[slug] || { name: slug },
-                    results: {}
+                    results: {},
+                    toolMeta: {}
                 });
             }
 
@@ -447,6 +477,21 @@ function aggregateTestResults(testData) {
                 // Only set if not already set (since we iterate newest to oldest)
                 if (!aggregatedEntry.results[toolId]) {
                     aggregatedEntry.results[toolId] = testResults[toolId];
+                    if (!aggregatedEntry.toolMeta[toolId]) {
+                        const toolData = tools[toolId];
+                        const toolInfo = toolData && typeof toolData === "object"
+                            ? Object.assign({ id: toolId }, toolData)
+                            : { id: toolId };
+                        aggregatedEntry.toolMeta[toolId] = {
+                            tool: toolInfo,
+                            test: {
+                                file: testItem.fileName || null,
+                                date: testWrapper.date || null,
+                                author: testWrapper.author || null,
+                                notes: testWrapper.notes || null
+                            }
+                        };
+                    }
                 }
             });
         });
@@ -457,4 +502,46 @@ function aggregateTestResults(testData) {
         const bName = (b.feature && b.feature.name) || b.slug;
         return aName.localeCompare(bName);
     });
+}
+
+function ensureHoverTooltip() {
+    let tooltip = document.getElementById("hover-tooltip");
+    if (!tooltip) {
+        tooltip = document.createElement("div");
+        tooltip.id = "hover-tooltip";
+        tooltip.className = "hover-tooltip";
+        const pre = document.createElement("pre");
+        pre.className = "hover-tooltip-content";
+        tooltip.appendChild(pre);
+        document.body.appendChild(tooltip);
+    }
+    return tooltip;
+}
+
+function updateHoverTooltip(tooltip, text) {
+    const pre = tooltip.querySelector(".hover-tooltip-content");
+    if (pre) {
+        pre.textContent = text;
+    }
+}
+
+function positionHoverTooltip(tooltip, clientX, clientY) {
+    const padding = 12;
+    const offset = 14;
+    tooltip.style.left = `${clientX + offset}px`;
+    tooltip.style.top = `${clientY + offset}px`;
+
+    const rect = tooltip.getBoundingClientRect();
+    let left = clientX + offset;
+    let top = clientY + offset;
+
+    if (left + rect.width + padding > window.innerWidth) {
+        left = clientX - rect.width - offset;
+    }
+    if (top + rect.height + padding > window.innerHeight) {
+        top = clientY - rect.height - offset;
+    }
+
+    tooltip.style.left = `${Math.max(padding, left)}px`;
+    tooltip.style.top = `${Math.max(padding, top)}px`;
 }

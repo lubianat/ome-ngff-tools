@@ -38,6 +38,15 @@ NB: the <a href="https://github.com/saalfeldlab/n5-viewer">N5-viewer</a>, a Fiji
   .feature img {
     opacity: 0.5;
   }
+  .feature-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .feature-name {
+    font-weight: 600;
+  }
   .feature {
     background: white;
     position: sticky;
@@ -109,10 +118,12 @@ NB: the <a href="https://github.com/saalfeldlab/n5-viewer">N5-viewer</a>, a Fiji
     {% for feature in site.data.features %}
       <tr>
         <td class="feature">
-          {{ feature.name }}
-          {% if feature.description %}
-            <img src="assets/img/icon_info.svg" width="20px" height="20px" title="{{ feature.description }}" />
-          {% endif %}
+          <span class="feature-label">
+            <span class="feature-name">{{ feature.name }}</span>
+            {% if feature.description %}
+              <img src="assets/img/icon_info.svg" width="20px" height="20px" title="{{ feature.description }}" />
+            {% endif %}
+          </span>
         </td>
         <td class="sample">
           {% if feature.sample_url and feature.sample_name %}

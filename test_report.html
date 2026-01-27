@@ -106,6 +106,39 @@
         
         const finalViewerOrder = Array.from(viewerSet);
 
+        const toolMeta = {};
+        Object.keys(tools).forEach((toolId) => {
+            const toolData = tools[toolId];
+            const toolInfo = toolData && typeof toolData === "object"
+                ? Object.assign({ id: toolId }, toolData)
+                : { id: toolId };
+            toolMeta[toolId] = {
+              tool: toolInfo,
+              test: {
+                file: testFile || null,
+                date: testWrapper.date || null,
+                author: testWrapper.author || null,
+                notes: testWrapper.notes || null
+              }
+            };
+        });
+        Object.values(results).forEach((featureResults) => {
+            if (!featureResults || typeof featureResults !== "object") return;
+            Object.keys(featureResults).forEach((toolId) => {
+                if (!toolMeta[toolId]) {
+                    toolMeta[toolId] = {
+                      tool: { id: toolId },
+                      test: {
+                        file: testFile || null,
+                        date: testWrapper.date || null,
+                        author: testWrapper.author || null,
+                        notes: testWrapper.notes || null
+                      }
+                    };
+                }
+            });
+        });
+
         // Prepare entries
         const featureKeys = new Set([...Object.keys(features), ...Object.keys(results)]);
         const entries = [];
@@ -115,7 +148,8 @@
             entries.push({
               slug,
               feature,
-              results: results[slug] || {}
+              results: results[slug] || {},
+              toolMeta
             });
         });
 

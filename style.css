@@ -153,8 +153,13 @@ td.missing { background: var(--missing); color: var(--text-on-color); }
 
 .feature-name {
   font-weight: 600;
-  display: block;
-  margin-bottom: 4px;
+}
+
+.feature-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .icon-row {
@@ -177,6 +182,19 @@ td.missing { background: var(--missing); color: var(--text-on-color); }
   opacity: 1;
 }
 
+.cell-info-icon {
+  color: inherit;
+  opacity: 0.4;
+  cursor: help;
+  font-size: 1.05em;
+  display: inline-flex;
+  align-items: center;
+}
+
+.cell-info-icon:hover {
+  opacity: 0.8;
+}
+
 td.clickable {
   cursor: pointer;
 }
@@ -187,6 +205,35 @@ td.clickable {
   margin-left: 6px;
   font-size: 0.9em;
   cursor: help;
+}
+
+.feature-label .info-icon {
+  margin-left: 0;
+}
+
+.hover-tooltip {
+  position: fixed;
+  z-index: 999;
+  max-width: 360px;
+  background: #fff;
+  border: 1px solid var(--stroke);
+  border-radius: 8px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.15);
+  padding: 10px 12px;
+  display: none;
+  pointer-events: none;
+}
+
+.hover-tooltip.visible {
+  display: block;
+}
+
+.hover-tooltip-content {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  font-family: "SFMono-Regular", "Menlo", "Consolas", "Liberation Mono", monospace;
 }
 
 .test-selector {
