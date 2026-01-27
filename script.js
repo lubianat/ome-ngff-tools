@@ -194,7 +194,9 @@ function buildHeader(viewerOrder, viewerMap, toolRefIndex) {
         th.textContent = label;
 
         const toolInfo = resolveToolInfo(toolRefIndex, viewer.id);
-        const instructions = toolInfo ? normalizeInstructions(toolInfo.test_instructions) : "";
+        const viewerInstructions = normalizeInstructions(viewer.test_instructions);
+        const toolInstructions = toolInfo ? normalizeInstructions(toolInfo.test_instructions) : "";
+        const instructions = viewerInstructions || toolInstructions;
         if (instructions) {
             const infoIcon = document.createElement("i");
             infoIcon.className = "fas fa-question-circle info-icon header-icon";

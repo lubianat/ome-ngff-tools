@@ -96,7 +96,12 @@ NB: the <a href="https://github.com/saalfeldlab/n5-viewer">N5-viewer</a>, a Fiji
       <th class="feature">feature</th>
       <td>sample data</td>
       {% for viewer in site.data.viewers %}
-        <th {% if viewer.widercol %} class="wider" {% endif %}>{{ viewer.id }}</th>
+        <th {% if viewer.widercol %} class="wider" {% endif %}>
+          {{ viewer.id }}
+          {% if viewer.test_instructions %}
+            <img src="assets/img/icon_info.svg" width="20px" height="20px" title="How to test:&#10;{{ viewer.test_instructions | join: '&#10;' }}" />
+          {% endif %}
+        </th>
       {% endfor %}
     </tr>
   </thead>

@@ -1,30 +1,55 @@
 - avivator:
   id: avivator
   viewer_url: https://avivator.gehlenborglab.org/?image_url=
+  test_instructions:
+    - "Open via URL, example: https://avivator.gehlenborglab.org/?image_url=https://example.org/data.zarr"
 - vizarr:
   id: vizarr
   viewer_url: https://hms-dbmi.github.io/vizarr/?source=
+  test_instructions:
+    - "Open via URL, example: https://hms-dbmi.github.io/vizarr/?source=https://example.org/data.zarr"
 - vole:
   id: Vol-E
   viewer_url: https://volumeviewer.allencell.org/viewer?url=
+  test_instructions:
+    - "Open via URL, example: https://volumeviewer.allencell.org/viewer?url=https://example.org/data.zarr"
 - vtk-itk-viewer:
   id: vtk-itk-viewer
   viewer_url: https://kitware.github.io/itk-vtk-viewer/app/?rotate=false&fileToLoad=
+  test_instructions:
+    - "Open via URL, example: https://kitware.github.io/itk-vtk-viewer/app/?rotate=false&fileToLoad=https://example.org/data.zarr"
 - neuroglancer:
   id: neuroglancer
   viewer_url: 'https://neuroglancer-demo.appspot.com/#!{"layers":[{"source":"zarr://'
   viewer_url_postfix: '","name":"OME-NGFF"}]}'
+  test_instructions:
+    - 'Open via URL, example: https://neuroglancer-demo.appspot.com/#!{"layers":[{"source":"zarr://https://example.org/data.zarr","name":"OME-NGFF"}]}'
 - WEBKNOSSOS:
   id: WEBKNOSSOS
   widercol: true
+  test_instructions:
+    - Open via WebKnossos dataset link (viewer URLs may be provided for specific samples).
 - napari:
   id: napari
+  test_instructions:
+    - "Open via command line, example: napari https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0062A/6001240.zarr"
+    - "Open additional images in the napari console: viewer.open(https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0101A/13457537.zarr, plugin=napari-ome-zarr)"
 - BigDataViewer:
   id: BigDataViewer
   widercol: true
+  test_instructions:
+    - "In Fiji: Plugins > BigDataViewer > HDF5/N5/Zarr/OME-NGFF Viewer."
+    - "Enter the URL in the dialog and click OK."
 - MoBIE:
   id: MoBIE
+  test_instructions:
+    - "In Fiji: Plugins > MoBIE > Open > Open OME ZARR, then enter URL.zarr."
+    - "For plates: Plugins > MoBIE > Open > Open HCS Dataset."
 - OMERO:
   id: OMERO
+  test_instructions:
+    - Open in OMERO with BioFormats ZarrReader.
 - MicroscopyNodes:
   id: Microscopy Nodes
+  test_instructions:
+    - Open in Blender with the Microscopy Nodes add-on and load the OME-Zarr URL.
