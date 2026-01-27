@@ -1,3 +1,48 @@
 - name: Z downsample
   slug: z_downsample
   description: Does the viewer handle image pyramids which have been down-sampled in the Z axis?
+- name: omero info
+  slug: omero_info
+  description: "Does the viewer use the 'omero' metadata to set channel colors, names and rendering levels?"
+- name: multiscales downsampling not=2
+  slug: multiscales_downsampling_not_2
+  description: Can the viewer handle pyramids when the scale factor between levels is not equal to 2?
+- name: axes (v0.3)
+  slug: axes_v0_3
+  description: "Are the axes names respected? Are 'z', 'c' & 't' axes handled correctly?"
+- name: axes (v0.4)
+  slug: axes_v0_4
+  description: Are the axes names and units respected?
+- name: labels
+  slug: labels
+  description: Does the viewer read and display labels nested within the image container?
+- name: HCS plate
+  slug: hcs_plate
+  description: Does the viewer display an OME-NGFF plate?
+- name: bioformats2raw.layout
+  slug: bioformats2raw_layout
+  description: Does the viewer handled a Fileset of images contained within a bioformats2raw.layout wrapper?
+- name: "multiple 'multiscales'"
+  slug: multiple_multiscales
+  description: "Does the viewer open any images beyond the first item in the 'multiscales' list?"
+- name: scale within coordinateTransformations on datasets (v0.4)
+  slug: scale_within_coordinate_transformations_on_datasets_v0_4
+  description: "Does the viewer read the 'scale' transformation for each item in `datasets` list, show pixel size or scalebar?"
+- name: translation within coordinateTransformations on datasets (v0.4)
+  slug: translation_within_coordinate_transformations_on_datasets_v0_4
+  description: "Does the viewer read the 'translation' transformation for each item in `datasets` list?"
+- name: scale within coordinateTransformations on multiscales (v0.4)
+  slug: scale_within_coordinate_transformations_on_multiscales_v0_4
+  description: "Does the viewer read the 'scale' transformation for each item in `multiscales` list?"
+- name: translation within coordinateTransformations on multiscales (v0.4)
+  slug: translation_within_coordinate_transformations_on_multiscales_v0_4
+  description: "Does the viewer read the 'translation' transformation for each item in `multiscales` list?"
+- name: overlay multiple images
+  slug: overlay_multiple_images
+  description: Is it possible to open more than 1 OME-NGFF image on the same canvas, to overlay them?
+- name: multiple Channels
+  slug: multiple_channels
+  description: Does the viewer support viewing of multiple Channels?
+- name: multiple Time-points
+  slug: multiple_time_points
+  description: Does the viewer support viewing of multiple Time-points?
