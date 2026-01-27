@@ -4,6 +4,7 @@
   --muted: #5a5a5a;
   --card: #ffffff;
   --stroke: #e6e6e6;
+  --column-divider: rgba(0, 0, 0, 0.08);
   --supported: #8bc34a;
   --fails: #f44336;
   --ignored: #ffeb3b;
@@ -72,6 +73,11 @@ th, td {
   vertical-align: middle;
 }
 
+th + th,
+td + td {
+  box-shadow: inset 1px 0 0 var(--column-divider);
+}
+
 thead th {
   position: sticky;
   top: 0;
@@ -87,13 +93,13 @@ th.feature, td.feature {
   min-width: 220px;
   max-width: 240px;
   z-index: 4;
-  border-right: 1px solid var(--stroke);
+  border-right: 1px solid var(--column-divider);
 }
 
 th.sample, td.sample {
   min-width: 200px;
   max-width: 240px;
-  border-right: 1px solid var(--stroke);
+  border-right: 1px solid var(--column-divider);
 }
 
 /* Key / Legend Styles */
@@ -203,6 +209,45 @@ td.clickable {
 }
 .nav-link:hover {
     text-decoration: underline;
+}
+
+.test-jump {
+  margin-top: 24px;
+  padding: 16px;
+  border: 1px solid var(--stroke);
+  border-radius: 10px;
+  background: #fafafa;
+}
+
+.test-jump-title {
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.test-jump-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.button-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--stroke);
+  background: #ffffff;
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.button-link.disabled {
+  opacity: 0.5;
+  pointer-events: none;
 }
 
 @media (max-width: 720px) {

@@ -35,6 +35,17 @@
         <tbody id="feature-table-body"></tbody>
       </table>
     </div>
+
+    <section class="test-jump" aria-label="Individual test reports">
+      <div class="test-jump-title">Individual tests</div>
+      <div class="test-jump-controls">
+        <label for="test-jump-select">Open report:</label>
+        <select id="test-jump-select">
+          <option value="">-- Choose a test file --</option>
+        </select>
+        <a id="test-jump-link" class="button-link disabled" href="test_report.html">View test report</a>
+      </div>
+    </section>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
@@ -43,7 +54,9 @@
     const state = {
       featureEntries: [],
       viewerOrder: [],
-      viewerMap: new Map()
+      viewerMap: new Map(),
+      featureRefIndex: new Map(),
+      toolRefIndex: new Map()
     };
 
     function isNewerTest(candidate, current) {
@@ -59,6 +72,13 @@
         const viewerData = await loadViewers();
         console.log("Viewers loaded:", viewerData);
         const viewers = normalizeViewerList(viewerData);
+
+        const [featureRefRaw, toolRefRaw] = await Promise.all([
+          loadFeatureRef(),
+          loadToolRef()
+        ]);
+        state.featureRefIndex = buildFeatureRefIndex(featureRefRaw);
+        state.toolRefIndex = buildToolRefIndex(toolRefRaw);
 
         viewers.forEach((viewer) => {
           if (!viewer || !viewer.id) return;
@@ -103,12 +123,37 @@
         logDebug("Feature entries", state.featureEntries);
 
         console.log("Building header...");
-        buildHeader(state.viewerOrder, state.viewerMap);
+        buildHeader(state.viewerOrder, state.viewerMap, state.toolRefIndex);
         console.log("Building rows...");
-        buildRows(state.featureEntries, state.viewerOrder, state.viewerMap);
+        buildRows(state.featureEntries, state.viewerOrder, state.viewerMap, state.featureRefIndex);
         console.log("Table built successfully.");
 
         status.textContent = "Loaded " + state.featureEntries.length + " features from " + testData.length + " tests.";
+
+        const testSelect = document.getElementById("test-jump-select");
+        const testLink = document.getElementById("test-jump-link");
+        if (testSelect && testLink) {
+          testList.forEach((file) => {
+            const option = document.createElement("option");
+            option.value = file;
+            option.textContent = file;
+            testSelect.appendChild(option);
+          });
+
+          const updateLink = () => {
+            const file = testSelect.value;
+            if (file) {
+              testLink.href = "test_report.html?test=" + encodeURIComponent(file);
+              testLink.classList.remove("disabled");
+            } else {
+              testLink.href = "test_report.html";
+              testLink.classList.add("disabled");
+            }
+          };
+
+          testSelect.addEventListener("change", updateLink);
+          updateLink();
+        }
 
       } catch (error) {
         console.error(error);

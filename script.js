@@ -6,6 +6,8 @@ const DEFAULT_TEST_FILES = [
 
 const VIEWERS_FILE = "docs/_data/viewers.yml";
 const TEST_INDEX_FILE = "docs/_data/_tests/index.json";
+const FEATURE_REF_FILE = "docs/_data/feature_ref.yml";
+const TOOL_REF_FILE = "docs/_data/tool_ref.yml";
 
 // Helper functions for boolean logic
 function isTrue(val) {
@@ -24,6 +26,75 @@ function isFalse(val) {
 
 function logDebug(...args) {
     console.log("[app]", ...args);
+}
+
+function normalizeKey(value) {
+    return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+function normalizeInstructions(value) {
+    if (!value) return "";
+    if (Array.isArray(value)) {
+        return value
+            .map((item) => String(item || "").trim())
+            .filter(Boolean)
+            .join("\n");
+    }
+    return String(value).trim();
+}
+
+function buildFeatureRefIndex(featureRefRaw) {
+    const index = new Map();
+    if (!Array.isArray(featureRefRaw)) return index;
+    featureRefRaw.forEach((entry) => {
+        if (!entry || typeof entry !== "object") return;
+        if (entry.slug) index.set(normalizeKey(entry.slug), entry);
+        if (entry.name) index.set(normalizeKey(entry.name), entry);
+    });
+    return index;
+}
+
+function resolveFeatureRef(index, slug, name) {
+    if (!index) return null;
+    if (slug) {
+        const match = index.get(normalizeKey(slug));
+        if (match) return match;
+    }
+    if (name) {
+        const match = index.get(normalizeKey(name));
+        if (match) return match;
+    }
+    return null;
+}
+
+function buildToolRefIndex(toolRefRaw) {
+    const index = new Map();
+    if (!Array.isArray(toolRefRaw)) return index;
+    toolRefRaw.forEach((item) => {
+        if (!item || typeof item !== "object") return;
+        if (item.id) {
+            index.set(normalizeKey(item.id), item);
+            return;
+        }
+        const keys = Object.keys(item);
+        if (keys.length === 0) return;
+        const key = keys[0];
+        const val = item[key];
+        if (val && typeof val === "object") {
+            const id = val.id || key;
+            const entry = Object.assign({ id }, val);
+            index.set(normalizeKey(id), entry);
+            index.set(normalizeKey(key), entry);
+            return;
+        }
+        index.set(normalizeKey(key), { id: key });
+    });
+    return index;
+}
+
+function resolveToolInfo(index, viewerId) {
+    if (!index || !viewerId) return null;
+    return index.get(normalizeKey(viewerId)) || null;
 }
 
 function normalizeViewerList(viewerData) {
@@ -107,11 +178,9 @@ function normalizeResults(resultsRaw, features) {
     return resultsObj;
 }
 
-function buildHeader(viewerOrder, viewerMap) {
+function buildHeader(viewerOrder, viewerMap, toolRefIndex) {
     const headerRow = document.getElementById("feature-header-row");
     // Clear existing headers except first two (Feature, Sample Data)
-    // But wait, index.html might have them already? 
-    // Let's be safe and clear everything after the first two children.
     while (headerRow.children.length > 2) {
         headerRow.removeChild(headerRow.lastChild);
     }
@@ -120,33 +189,54 @@ function buildHeader(viewerOrder, viewerMap) {
         const viewer = viewerMap.get(viewerId) || { id: viewerId };
         const th = document.createElement("th");
         if (viewer.widercol) th.classList.add("wider");
-        th.textContent = viewer.id;
+
+        let label = viewer.id;
+        th.textContent = label;
+
+        const toolInfo = resolveToolInfo(toolRefIndex, viewer.id);
+        const instructions = toolInfo ? normalizeInstructions(toolInfo.test_instructions) : "";
+        if (instructions) {
+            const infoIcon = document.createElement("i");
+            infoIcon.className = "fas fa-question-circle info-icon header-icon";
+            infoIcon.title = "How to test:\n" + instructions;
+            th.appendChild(infoIcon);
+        }
+
         headerRow.appendChild(th);
     });
 }
 
-function buildRows(entries, viewerOrder, viewerMap) {
+function buildRows(entries, viewerOrder, viewerMap, featureRefIndex) {
     const tbody = document.getElementById("feature-table-body");
     tbody.innerHTML = "";
 
     entries.forEach((entry) => {
         const feature = entry.feature || {};
+        const ref = resolveFeatureRef(featureRefIndex, entry.slug, feature.name);
+        const mergedFeature = Object.assign({}, ref || {}, feature || {});
         const tr = document.createElement("tr");
 
         // Feature Column
         const featureCell = document.createElement("td");
         featureCell.classList.add("feature");
 
-        const name = feature.name || entry.slug;
+        const name = mergedFeature.name || entry.slug;
         const featureName = document.createElement("span");
         featureName.classList.add("feature-name");
         featureName.textContent = name;
         featureCell.appendChild(featureName);
 
-        if (feature.description) {
+        const description = mergedFeature.description;
+        const featureInstructions = normalizeInstructions(
+            mergedFeature.how_to_test || mergedFeature.test_instructions
+        );
+        if (description || featureInstructions) {
             const infoIcon = document.createElement("i");
             infoIcon.className = "fas fa-info-circle info-icon";
-            infoIcon.title = feature.description;
+            const tooltipParts = [];
+            if (description) tooltipParts.push(description);
+            if (featureInstructions) tooltipParts.push("How to test:\n" + featureInstructions);
+            infoIcon.title = tooltipParts.join("\n\n");
             featureCell.appendChild(infoIcon);
         }
         tr.appendChild(featureCell);
@@ -155,19 +245,19 @@ function buildRows(entries, viewerOrder, viewerMap) {
         const sampleCell = document.createElement("td");
         sampleCell.classList.add("sample");
 
-        if (feature.sample_url && feature.sample_name) {
+        if (mergedFeature.sample_url && mergedFeature.sample_name) {
             const link = document.createElement("a");
-            link.href = feature.sample_url;
+            link.href = mergedFeature.sample_url;
             link.target = "_blank";
-            link.innerHTML = '<i class="far fa-file-alt"></i> ' + feature.sample_name;
+            link.innerHTML = '<i class="far fa-file-alt"></i> ' + mergedFeature.sample_name;
             sampleCell.appendChild(link);
-        } else if (feature.sample_name) {
-            sampleCell.innerHTML = '<i class="far fa-file-alt"></i> ' + feature.sample_name;
+        } else if (mergedFeature.sample_name) {
+            sampleCell.innerHTML = '<i class="far fa-file-alt"></i> ' + mergedFeature.sample_name;
         }
 
-        if (feature.sample_html) {
+        if (mergedFeature.sample_html) {
             const htmlSpan = document.createElement("span");
-            htmlSpan.innerHTML = " " + feature.sample_html;
+            htmlSpan.innerHTML = " " + mergedFeature.sample_html;
             sampleCell.appendChild(htmlSpan);
         }
         tr.appendChild(sampleCell);
@@ -251,6 +341,24 @@ async function loadYamlFile(path) {
 
 async function loadViewers() {
     return loadYamlFile(VIEWERS_FILE);
+}
+
+async function loadFeatureRef() {
+    try {
+        return await loadYamlFile(FEATURE_REF_FILE);
+    } catch (e) {
+        console.warn("Feature ref not available", e);
+        return [];
+    }
+}
+
+async function loadToolRef() {
+    try {
+        return await loadYamlFile(TOOL_REF_FILE);
+    } catch (e) {
+        console.warn("Tool ref not available", e);
+        return [];
+    }
 }
 
 async function loadTests() {

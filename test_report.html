@@ -50,7 +50,9 @@
   <script>
     const state = {
       viewerOrder: [],
-      viewerMap: new Map()
+      viewerMap: new Map(),
+      featureRefIndex: new Map(),
+      toolRefIndex: new Map()
     };
 
     async function loadAndDisplayTest(testFile) {
@@ -123,8 +125,8 @@
           return aName.localeCompare(bName);
         });
 
-        buildHeader(finalViewerOrder, localViewerMap);
-        buildRows(entries, finalViewerOrder, localViewerMap);
+        buildHeader(finalViewerOrder, localViewerMap, state.toolRefIndex);
+        buildRows(entries, finalViewerOrder, localViewerMap, state.featureRefIndex);
         
         status.style.display = "none";
         tableContainer.style.display = "block";
@@ -146,6 +148,13 @@
           state.viewerMap.set(viewer.id, viewer);
           state.viewerOrder.push(viewer.id);
         });
+
+        const [featureRefRaw, toolRefRaw] = await Promise.all([
+          loadFeatureRef(),
+          loadToolRef()
+        ]);
+        state.featureRefIndex = buildFeatureRefIndex(featureRefRaw);
+        state.toolRefIndex = buildToolRefIndex(toolRefRaw);
 
         const testList = await loadTests();
         testList.forEach(file => {
