@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OME-NGFF Test Report</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" onerror="console.error('Failed to load FontAwesome CSS');" onload="console.log('FontAwesome CSS loaded successfully');" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <a href="index.html" class="nav-link"><i class="fas fa-arrow-left"></i> Back to Matrix</a>
+    <h1>Individual Test Report</h1>
+    <p id="subtitle">Select a test file to view results.</p>
+  </header>
+
+  <main>
+    <div class="test-selector">
+      <label for="test-select">Select Test:</label>
+      <select id="test-select">
+        <option value="">-- Choose a test file --</option>
+      </select>
+    </div>
+
+    <h3>Key</h3>
+    <div class="legend">
+      <div class="legend-item supported">Feature<br>supported</div>
+      <div class="legend-item ignored">Not supported<br>(no effect)</div>
+      <div class="legend-item fails">Image doesn't<br>open correctly</div>
+      <div class="legend-item missing">Not tested /<br>not confirmed</div>
+    </div>
+
+    <p class="status-line" id="status">Waiting for selection...</p>
+
+    <div class="table-wrap" id="table-container" style="display:none;">
+      <table>
+        <thead>
+          <tr id="feature-header-row">
+            <th class="feature">Feature</th>
+            <th class="sample">Sample data</th>
+          </tr>
+        </thead>
+        <tbody id="feature-table-body"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+  <script src="script.js"></script>
+  <script>
+    const state = {
+      viewerOrder: [],
+      viewerMap: new Map()
+    };
+
+    async function loadAndDisplayTest(testFile) {
+      const status = document.getElementById("status");
+      const tableContainer = document.getElementById("table-container");
+      const subtitle = document.getElementById("subtitle");
+      
+      status.textContent = "Loading " + testFile + "...";
+      status.style.display = "block";
+      tableContainer.style.display = "none";
+      subtitle.textContent = "Viewing results for: " + testFile;
+
+      try {
+        const raw = await loadYamlFile(testFile);
+        const testWrapper = normalizeTestWrapper(raw);
+        
+        if (!testWrapper) {
+            throw new Error("Invalid test file format");
+        }
+
+        const features = testWrapper.features || {};
+        const results = normalizeResults(testWrapper.results, features);
+        
+        // Collect all viewers involved in this test
+        const localViewerOrder = [];
+        const localViewerMap = new Map(state.viewerMap); // Start with global viewers
+        
+        // Add any tools defined in the test itself
+        const tools = testWrapper.tools || {};
+        Object.keys(tools).forEach((toolId) => {
+            if (!localViewerMap.has(toolId)) {
+                localViewerMap.set(toolId, { id: toolId });
+            }
+        });
+
+        // Determine viewer order based on results
+        const viewerSet = new Set();
+        // Add global viewers first
+        state.viewerOrder.forEach(v => viewerSet.add(v));
+        
+        // Add any other viewers found in results
+        Object.values(results).forEach((featureResults) => {
+            if (!featureResults || typeof featureResults !== "object") return;
+            Object.keys(featureResults).forEach((toolId) => {
+                viewerSet.add(toolId);
+                if (!localViewerMap.has(toolId)) {
+                    localViewerMap.set(toolId, { id: toolId });
+                }
+            });
+        });
+        
+        const finalViewerOrder = Array.from(viewerSet);
+
+        // Prepare entries
+        const featureKeys = new Set([...Object.keys(features), ...Object.keys(results)]);
+        const entries = [];
+        
+        featureKeys.forEach((slug) => {
+            const feature = features[slug] || { name: slug };
+            entries.push({
+              slug,
+              feature,
+              results: results[slug] || {}
+            });
+        });
+
+        entries.sort((a, b) => {
+          const aName = (a.feature && a.feature.name) || a.slug;
+          const bName = (b.feature && b.feature.name) || b.slug;
+          return aName.localeCompare(bName);
+        });
+
+        buildHeader(finalViewerOrder, localViewerMap);
+        buildRows(entries, finalViewerOrder, localViewerMap);
+        
+        status.style.display = "none";
+        tableContainer.style.display = "block";
+
+      } catch (e) {
+        console.error(e);
+        status.textContent = "Error loading test: " + e.message;
+      }
+    }
+
+    async function main() {
+      const select = document.getElementById("test-select");
+      
+      try {
+        const viewerData = await loadViewers();
+        const viewers = normalizeViewerList(viewerData);
+        viewers.forEach((viewer) => {
+          if (!viewer || !viewer.id) return;
+          state.viewerMap.set(viewer.id, viewer);
+          state.viewerOrder.push(viewer.id);
+        });
+
+        const testList = await loadTests();
+        testList.forEach(file => {
+            const option = document.createElement("option");
+            option.value = file;
+            option.textContent = file;
+            select.appendChild(option);
+        });
+
+        // Check URL params
+        const urlParams = new URLSearchParams(window.location.search);
+        const testParam = urlParams.get('test');
+        
+        if (testParam) {
+            select.value = testParam;
+            loadAndDisplayTest(testParam);
+        }
+
+        select.addEventListener("change", (e) => {
+            const file = e.target.value;
+            if (file) {
+                // Update URL without reloading
+                const newUrl = new URL(window.location);
+                newUrl.searchParams.set('test', file);
+                window.history.pushState({}, '', newUrl);
+                loadAndDisplayTest(file);
+            }
+        });
+
+      } catch (error) {
+        console.error(error);
+        document.getElementById("status").textContent = "Failed to initialize.";
+      }
+    }
+
+    main();
+  </script>
+</body>
+</html>
