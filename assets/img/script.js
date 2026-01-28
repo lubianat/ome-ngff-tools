@@ -900,27 +900,35 @@ function buildRows(entries, viewerOrder, viewerMap, featureRefIndex, tbodyOverri
             tr.appendChild(cell);
 
             const cellMeta = entry.toolMeta ? entry.toolMeta[viewerId] : null;
-            const toolInfo = cellMeta && cellMeta.tool ? cellMeta.tool : null;
-            const infoPayload = toolInfo || { id: viewer.id, note: "No tool metadata for this cell." };
-            const formatted = JSON.stringify(infoPayload, null, 2);
+            const testMeta = cellMeta && cellMeta.test ? cellMeta.test : null;
+            const hasMeta = Boolean(
+                testMeta && (testMeta.tool_version || testMeta.additional_versions || testMeta.notes)
+            );
+            if (hasMeta) {
+                const infoPayload = { id: viewer.id };
+                if (testMeta.tool_version) infoPayload.version = testMeta.tool_version;
+                if (testMeta.additional_versions) infoPayload.additional_versions = testMeta.additional_versions;
+                if (testMeta.notes) infoPayload.notes = testMeta.notes;
+                const formatted = JSON.stringify(infoPayload, null, 2);
 
-            const infoIcon = document.createElement("span");
-            infoIcon.className = "cell-info-icon";
-            infoIcon.setAttribute("aria-label", "Show tool version details");
-            infoIcon.innerHTML = '<i class="fas fa-question-circle"></i>';
-            iconRow.appendChild(infoIcon);
+                const infoIcon = document.createElement("span");
+                infoIcon.className = "cell-info-icon";
+                infoIcon.setAttribute("aria-label", "Show tool version details");
+                infoIcon.innerHTML = '<i class="fas fa-question-circle"></i>';
+                iconRow.appendChild(infoIcon);
 
-            infoIcon.addEventListener("mouseenter", (event) => {
-                updateHoverTooltip(tooltip, formatted);
-                positionHoverTooltip(tooltip, event.clientX, event.clientY);
-                tooltip.classList.add("visible");
-            });
-            infoIcon.addEventListener("mousemove", (event) => {
-                positionHoverTooltip(tooltip, event.clientX, event.clientY);
-            });
-            infoIcon.addEventListener("mouseleave", () => {
-                tooltip.classList.remove("visible");
-            });
+                infoIcon.addEventListener("mouseenter", (event) => {
+                    updateHoverTooltip(tooltip, formatted);
+                    positionHoverTooltip(tooltip, event.clientX, event.clientY);
+                    tooltip.classList.add("visible");
+                });
+                infoIcon.addEventListener("mousemove", (event) => {
+                    positionHoverTooltip(tooltip, event.clientX, event.clientY);
+                });
+                infoIcon.addEventListener("mouseleave", () => {
+                    tooltip.classList.remove("visible");
+                });
+            }
         });
 
         tbody.appendChild(tr);
