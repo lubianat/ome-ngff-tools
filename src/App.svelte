@@ -1,30 +1,46 @@
 <script>
-  import { onMount } from 'svelte';
-  import yaml from 'js-yaml';
+  import { onMount } from "svelte";
+  import yaml from "js-yaml";
 
   let loading = true;
   let error = null;
   let versions = [];
 
+  // Modal state for cell details
+  let selectedCell = null;
+
+  function openCellDetails(tool, feature, result) {
+    if (result) {
+      selectedCell = { tool, feature, result };
+    }
+  }
+
+  function closeCellDetails() {
+    selectedCell = null;
+  }
+
   onMount(async () => {
     try {
       // Load features
-      const featuresRes = await fetch('/data/features_new.yml');
+      const featuresRes = await fetch("/data/features_new.yml");
       const featureList = yaml.load(await featuresRes.text());
 
       // Load tool index and tool files
-      const indexRes = await fetch('/data/tools/index.json');
+      const indexRes = await fetch("/data/tools/index.json");
       const toolFiles = await indexRes.json();
-      
+
       const tools = [];
       for (const file of toolFiles) {
         try {
-          const res = await fetch('/' + file);
+          const res = await fetch("/" + file);
           const raw = yaml.load(await res.text());
-          const id = file.split('/').pop().replace(/\.ya?ml$/i, '');
+          const id = file
+            .split("/")
+            .pop()
+            .replace(/\.ya?ml$/i, "");
           tools.push({ id, raw });
         } catch (e) {
-          console.warn('Failed to load', file);
+          console.warn("Failed to load", file);
         }
       }
 
@@ -40,52 +56,63 @@
   function buildMatrix(featureList, tools) {
     // Collect all versions from features
     const versionSet = new Set();
-    featureList.forEach(f => {
-      if (f.versions) Object.keys(f.versions).forEach(v => versionSet.add(v));
+    featureList.forEach((f) => {
+      if (f.versions) Object.keys(f.versions).forEach((v) => versionSet.add(v));
     });
-    
-    const versionOrder = Array.from(versionSet).sort((a, b) => parseFloat(b) - parseFloat(a));
-    
-    return versionOrder.map(version => {
+
+    const versionOrder = Array.from(versionSet).sort(
+      (a, b) => parseFloat(b) - parseFloat(a),
+    );
+
+    return versionOrder.map((version) => {
       // Get features for this version
       const features = featureList
-        .filter(f => f.versions && f.versions[version])
-        .map(f => {
-          const vData = Array.isArray(f.versions[version]) 
-            ? f.versions[version].reduce((acc, item) => ({ ...acc, ...item }), {})
+        .filter((f) => f.versions && f.versions[version])
+        .map((f) => {
+          const vData = Array.isArray(f.versions[version])
+            ? f.versions[version].reduce(
+                (acc, item) => ({ ...acc, ...item }),
+                {},
+              )
             : f.versions[version];
           return {
             slug: f.slug,
             name: vData.name || f.name,
             description: vData.description || f.description,
             sample_url: vData.sample_url || f.sample_url,
-            sample_name: vData.sample_name || f.sample_name
+            sample_name: vData.sample_name || f.sample_name,
           };
         })
         .sort((a, b) => a.name.localeCompare(b.name));
 
       // Get tool results for this version
-      const toolData = tools.map(tool => {
+      const toolData = tools.map((tool) => {
         const info = tool.raw?.tool_info || { id: tool.id, name: tool.id };
         const testInfo = tool.raw?.test_info || {};
-        
+
         // Collect results for each feature, with newer tests taking precedence
         const results = {};
-        
+
         // Sort test keys so newer tests (higher numbers) are processed last and override older ones
         const sortedTestKeys = Object.keys(testInfo).sort((a, b) => {
           // Extract numeric part from test names like "test-1", "test-2"
-          const numA = parseInt(a.replace(/\D/g, '')) || 0;
-          const numB = parseInt(b.replace(/\D/g, '')) || 0;
+          const numA = parseInt(a.replace(/\D/g, "")) || 0;
+          const numB = parseInt(b.replace(/\D/g, "")) || 0;
           return numA - numB; // Lower numbers first, higher numbers last (so newer wins)
         });
-        
-        sortedTestKeys.forEach(testKey => {
+
+        sortedTestKeys.forEach((testKey) => {
           const test = testInfo[testKey];
           const versionBlock = test.features?.[version];
           if (versionBlock) {
             Object.entries(versionBlock).forEach(([slug, result]) => {
-              results[slug] = result;
+              // Store result with test metadata
+              results[slug] = {
+                ...result,
+                _testId: testKey,
+                _toolVersion: test.tool_version,
+                _additionalVersions: test.additional_versions,
+              };
             });
           }
         });
@@ -94,7 +121,8 @@
           id: tool.id,
           name: info.name || info.label || tool.id,
           viewer_url: info.viewer_url,
-          results
+          test_instructions: info.test_instructions,
+          results,
         };
       });
 
@@ -103,11 +131,12 @@
   }
 
   function getStatus(result) {
-    if (!result) return 'missing';
-    if (result.supported === true || result.supported === 'yes') return 'supported';
-    if (result.opens === false || result.opens === 'no') return 'fails';
-    if (result.opens === true || result.opens === 'yes') return 'ignored';
-    return 'missing';
+    if (!result) return "missing";
+    if (result.supported === true || result.supported === "yes")
+      return "supported";
+    if (result.opens === false || result.opens === "no") return "fails";
+    if (result.opens === true || result.opens === "yes") return "ignored";
+    return "missing";
   }
 
   function getViewerUrl(tool, feature, result) {
@@ -117,7 +146,15 @@
     }
     return null;
   }
+
+  function handleKeydown(e) {
+    if (e.key === "Escape" && selectedCell) {
+      closeCellDetails();
+    }
+  }
 </script>
+
+<svelte:window on:keydown={handleKeydown} />
 
 <div class="app">
   <header class="hero">
@@ -154,7 +191,15 @@
                   <th class="sticky">Feature</th>
                   <th>Sample</th>
                   {#each v.tools as tool}
-                    <th>{tool.name}</th>
+                    <th class="tool-header">
+                      <span>{tool.name}</span>
+                      {#if tool.test_instructions}
+                        <i
+                          class="fas fa-question-circle tool-info-icon"
+                          title={tool.test_instructions}
+                        ></i>
+                      {/if}
+                    </th>
                   {/each}
                 </tr>
               </thead>
@@ -164,28 +209,59 @@
                     <td class="sticky feature-cell">
                       <span class="feature-name">{feature.name}</span>
                       {#if feature.description}
-                        <i class="fas fa-info-circle info-icon" title={feature.description}></i>
+                        <i
+                          class="fas fa-info-circle info-icon"
+                          title={feature.description}
+                        ></i>
                       {/if}
                     </td>
                     <td class="sample-cell">
                       {#if feature.sample_url}
-                        <a href={feature.sample_url} target="_blank">{feature.sample_name || 'Sample'}</a>
+                        <a href={feature.sample_url} target="_blank"
+                          >{feature.sample_name || "Sample"}</a
+                        >
                       {/if}
                     </td>
                     {#each v.tools as tool}
                       {@const result = tool.results[feature.slug]}
                       {@const status = getStatus(result)}
                       {@const viewerUrl = getViewerUrl(tool, feature, result)}
-                      <td class={status}>
+                      <td
+                        class="{status} {result ? 'clickable' : ''}"
+                        on:click={() => openCellDetails(tool, feature, result)}
+                        on:keydown={(e) =>
+                          e.key === "Enter" &&
+                          openCellDetails(tool, feature, result)}
+                        tabindex={result ? 0 : -1}
+                        role={result ? "button" : undefined}
+                      >
                         {#if viewerUrl}
-                          <a href={viewerUrl} target="_blank" class="icon-link" title="Open in viewer">
+                          <a
+                            href={viewerUrl}
+                            target="_blank"
+                            class="icon-link"
+                            title="Open in viewer"
+                            on:click|stopPropagation
+                          >
                             <i class="fas fa-eye"></i>
                           </a>
                         {/if}
                         {#if result?.issue_url}
-                          <a href={result.issue_url} target="_blank" class="icon-link" title="GitHub issue">
+                          <a
+                            href={result.issue_url}
+                            target="_blank"
+                            class="icon-link"
+                            title="GitHub issue"
+                            on:click|stopPropagation
+                          >
                             <i class="fab fa-github"></i>
                           </a>
+                        {/if}
+                        {#if result?.notes}
+                          <i
+                            class="fas fa-info-circle notes-icon"
+                            title={result.notes}
+                          ></i>
                         {/if}
                       </td>
                     {/each}
@@ -199,6 +275,74 @@
     {/if}
   </main>
 </div>
+
+<!-- Cell Details Modal -->
+{#if selectedCell}
+  <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-noninteractive-element-interactions -->
+  <div class="modal-overlay" role="presentation" on:click={closeCellDetails}>
+    <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+    <div class="modal" on:click|stopPropagation role="dialog" aria-modal="true">
+      <button
+        class="modal-close"
+        on:click={closeCellDetails}
+        aria-label="Close"
+      >
+        <i class="fas fa-times"></i>
+      </button>
+      <h3>{selectedCell.tool.name} — {selectedCell.feature.name}</h3>
+
+      <div class="modal-content">
+        <div class="modal-row">
+          <strong>Status:</strong>
+          <span class="status-badge {getStatus(selectedCell.result)}"
+            >{getStatus(selectedCell.result)}</span
+          >
+        </div>
+
+        {#if selectedCell.result._toolVersion}
+          <div class="modal-row">
+            <strong>Tool Version:</strong>
+            <span>{selectedCell.result._toolVersion}</span>
+          </div>
+        {/if}
+
+        {#if selectedCell.result._additionalVersions}
+          <div class="modal-row">
+            <strong>Dependencies:</strong>
+            <ul class="version-list">
+              {#each Object.entries(selectedCell.result._additionalVersions) as [pkg, ver]}
+                <li>{pkg}: {ver}</li>
+              {/each}
+            </ul>
+          </div>
+        {/if}
+
+        {#if selectedCell.result._testId}
+          <div class="modal-row">
+            <strong>Test ID:</strong>
+            <span>{selectedCell.result._testId}</span>
+          </div>
+        {/if}
+
+        {#if selectedCell.result.notes}
+          <div class="modal-row">
+            <strong>Notes:</strong>
+            <p class="notes-text">{selectedCell.result.notes}</p>
+          </div>
+        {/if}
+
+        {#if selectedCell.result.issue_url}
+          <div class="modal-row">
+            <strong>Issue:</strong>
+            <a href={selectedCell.result.issue_url} target="_blank"
+              >{selectedCell.result.issue_url}</a
+            >
+          </div>
+        {/if}
+      </div>
+    </div>
+  </div>
+{/if}
 
 <style>
   :global(:root) {
@@ -216,7 +360,9 @@
     --font-display: "Space Grotesk", sans-serif;
   }
 
-  :global(*) { box-sizing: border-box; }
+  :global(*) {
+    box-sizing: border-box;
+  }
   :global(body) {
     margin: 0;
     font-family: var(--font-body);
@@ -225,7 +371,9 @@
     min-height: 100vh;
   }
 
-  .app { min-height: 100vh; }
+  .app {
+    min-height: 100vh;
+  }
 
   .hero {
     padding: 48px 6vw 32px;
@@ -247,7 +395,11 @@
     margin: 0 0 16px;
     color: var(--muted);
   }
-  .version-links { display: flex; gap: 8px; flex-wrap: wrap; }
+  .version-links {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
   .chip {
     padding: 6px 12px;
     border-radius: 999px;
@@ -258,9 +410,13 @@
     font-weight: 600;
     font-size: 0.85rem;
   }
-  .chip:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+  .chip:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
 
-  main { padding: 32px 6vw 56px; }
+  main {
+    padding: 32px 6vw 56px;
+  }
 
   .legend {
     display: flex;
@@ -274,13 +430,22 @@
     font-size: 0.85rem;
     font-weight: 600;
   }
-  .legend-item.supported { background: var(--supported); }
-  .legend-item.ignored { background: var(--ignored); }
-  .legend-item.fails { background: var(--fails); color: white; }
-  .legend-item.missing { background: var(--missing); }
+  .legend-item.supported {
+    background: var(--supported);
+  }
+  .legend-item.ignored {
+    background: var(--ignored);
+  }
+  .legend-item.fails {
+    background: var(--fails);
+    color: white;
+  }
+  .legend-item.missing {
+    background: var(--missing);
+  }
 
   .version-section {
-    background: rgba(255,255,255,0.85);
+    background: rgba(255, 255, 255, 0.85);
     border: 1px solid var(--stroke);
     border-radius: 16px;
     padding: 20px;
@@ -303,7 +468,8 @@
     border-collapse: collapse;
     min-width: 600px;
   }
-  th, td {
+  th,
+  td {
     padding: 10px;
     text-align: left;
     border-bottom: 1px solid var(--stroke);
@@ -323,24 +489,183 @@
     z-index: 1;
     min-width: 200px;
   }
-  th.sticky { z-index: 3; }
+  th.sticky {
+    z-index: 3;
+  }
 
-  .feature-cell { display: flex; align-items: center; gap: 6px; }
-  .feature-name { font-weight: 600; }
-  .info-icon { color: var(--muted); cursor: help; font-size: 0.85em; }
-  .sample-cell a { color: var(--ink); }
+  .feature-cell {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .feature-name {
+    font-weight: 600;
+  }
+  .info-icon {
+    color: var(--muted);
+    cursor: help;
+    font-size: 0.85em;
+  }
+  .sample-cell a {
+    color: var(--ink);
+  }
 
-  td.supported { background: var(--supported); }
-  td.fails { background: var(--fails); }
-  td.ignored { background: var(--ignored); }
-  td.missing { background: var(--missing); }
+  td.supported {
+    background: var(--supported);
+  }
+  td.fails {
+    background: var(--fails);
+  }
+  td.ignored {
+    background: var(--ignored);
+  }
+  td.missing {
+    background: var(--missing);
+  }
 
   .icon-link {
     color: inherit;
     opacity: 0.7;
     margin-right: 6px;
   }
-  .icon-link:hover { opacity: 1; }
+  .icon-link:hover {
+    opacity: 1;
+  }
 
-  .error { color: var(--fails); }
+  .error {
+    color: var(--fails);
+  }
+
+  /* Tool header with info icon */
+  .tool-header {
+    white-space: nowrap;
+  }
+  .tool-header span {
+    margin-right: 4px;
+  }
+  .tool-info-icon {
+    color: var(--muted);
+    cursor: help;
+    font-size: 0.8em;
+    opacity: 0.7;
+  }
+  .tool-info-icon:hover {
+    opacity: 1;
+  }
+
+  /* Notes icon in cells */
+  .notes-icon {
+    color: inherit;
+    opacity: 0.7;
+    cursor: help;
+    font-size: 0.85em;
+  }
+
+  /* Clickable cells */
+  td.clickable {
+    cursor: pointer;
+  }
+  td.clickable:hover {
+    filter: brightness(0.95);
+  }
+
+  /* Modal styles */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+  .modal {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  }
+  .modal h3 {
+    margin: 0 0 16px;
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    padding-right: 30px;
+  }
+  .modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: var(--muted);
+    padding: 4px 8px;
+  }
+  .modal-close:hover {
+    color: var(--ink);
+  }
+  .modal-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .modal-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .modal-row strong {
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .modal-row a {
+    color: var(--accent);
+    word-break: break-all;
+  }
+  .status-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    width: fit-content;
+  }
+  .status-badge.supported {
+    background: var(--supported);
+  }
+  .status-badge.fails {
+    background: var(--fails);
+    color: white;
+  }
+  .status-badge.ignored {
+    background: var(--ignored);
+  }
+  .status-badge.missing {
+    background: var(--missing);
+  }
+  .version-list {
+    margin: 0;
+    padding-left: 20px;
+    font-size: 0.9rem;
+  }
+  .version-list li {
+    margin: 2px 0;
+  }
+  .notes-text {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    background: rgba(0, 0, 0, 0.03);
+    padding: 8px 12px;
+    border-radius: 6px;
+  }
 </style>
