@@ -21,18 +21,22 @@
 
   onMount(async () => {
     try {
+      const base = import.meta.env.BASE_URL || "/";
+      const withBase = (path) => `${base}${path}`;
+
       // Load features
-      const featuresRes = await fetch("/data/features_new.yml");
+      const featuresRes = await fetch(withBase("data/features_new.yml"));
       const featureList = yaml.load(await featuresRes.text());
 
       // Load tool index and tool files
-      const indexRes = await fetch("/data/tools/index.json");
+      const indexRes = await fetch(withBase("data/tools/index.json"));
       const toolFiles = await indexRes.json();
 
       const tools = [];
       for (const file of toolFiles) {
         try {
-          const res = await fetch("/" + file);
+          const cleanPath = file.replace(/^\/+/, "");
+          const res = await fetch(withBase(cleanPath));
           const raw = yaml.load(await res.text());
           const id = file
             .split("/")
