@@ -6,12 +6,18 @@ tool_info:
   test_instructions: >
     Open via URL, example: https://neuroglancer-demo.appspot.com/#!{"layers":[{"source":"zarr://https://example.org/data.zarr","name":"OME-NGFF"}]}
 test_info:
-  test-1:
+  test-2:
     features:
       0.3:
         axes_support:
           supported: no
           opens: no
+  test-1:
+    features:
+      0.3:
+        axes_support:
+          supported: yes # Added for testing the replacement by test-2
+          opens: yes # Added for testing the replacement by test-2
       0.4:
         z_downsample:
           supported: yes

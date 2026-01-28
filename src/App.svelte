@@ -1,0 +1,346 @@
+<script>
+  import { onMount } from 'svelte';
+  import yaml from 'js-yaml';
+
+  let loading = true;
+  let error = null;
+  let versions = [];
+
+  onMount(async () => {
+    try {
+      // Load features
+      const featuresRes = await fetch('/data/features_new.yml');
+      const featureList = yaml.load(await featuresRes.text());
+
+      // Load tool index and tool files
+      const indexRes = await fetch('/data/tools/index.json');
+      const toolFiles = await indexRes.json();
+      
+      const tools = [];
+      for (const file of toolFiles) {
+        try {
+          const res = await fetch('/' + file);
+          const raw = yaml.load(await res.text());
+          const id = file.split('/').pop().replace(/\.ya?ml$/i, '');
+          tools.push({ id, raw });
+        } catch (e) {
+          console.warn('Failed to load', file);
+        }
+      }
+
+      // Build version data
+      versions = buildMatrix(featureList, tools);
+      loading = false;
+    } catch (e) {
+      error = e.message;
+      loading = false;
+    }
+  });
+
+  function buildMatrix(featureList, tools) {
+    // Collect all versions from features
+    const versionSet = new Set();
+    featureList.forEach(f => {
+      if (f.versions) Object.keys(f.versions).forEach(v => versionSet.add(v));
+    });
+    
+    const versionOrder = Array.from(versionSet).sort((a, b) => parseFloat(b) - parseFloat(a));
+    
+    return versionOrder.map(version => {
+      // Get features for this version
+      const features = featureList
+        .filter(f => f.versions && f.versions[version])
+        .map(f => {
+          const vData = Array.isArray(f.versions[version]) 
+            ? f.versions[version].reduce((acc, item) => ({ ...acc, ...item }), {})
+            : f.versions[version];
+          return {
+            slug: f.slug,
+            name: vData.name || f.name,
+            description: vData.description || f.description,
+            sample_url: vData.sample_url || f.sample_url,
+            sample_name: vData.sample_name || f.sample_name
+          };
+        })
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      // Get tool results for this version
+      const toolData = tools.map(tool => {
+        const info = tool.raw?.tool_info || { id: tool.id, name: tool.id };
+        const testInfo = tool.raw?.test_info || {};
+        
+        // Collect results for each feature, with newer tests taking precedence
+        const results = {};
+        
+        // Sort test keys so newer tests (higher numbers) are processed last and override older ones
+        const sortedTestKeys = Object.keys(testInfo).sort((a, b) => {
+          // Extract numeric part from test names like "test-1", "test-2"
+          const numA = parseInt(a.replace(/\D/g, '')) || 0;
+          const numB = parseInt(b.replace(/\D/g, '')) || 0;
+          return numA - numB; // Lower numbers first, higher numbers last (so newer wins)
+        });
+        
+        sortedTestKeys.forEach(testKey => {
+          const test = testInfo[testKey];
+          const versionBlock = test.features?.[version];
+          if (versionBlock) {
+            Object.entries(versionBlock).forEach(([slug, result]) => {
+              results[slug] = result;
+            });
+          }
+        });
+
+        return {
+          id: tool.id,
+          name: info.name || info.label || tool.id,
+          viewer_url: info.viewer_url,
+          results
+        };
+      });
+
+      return { version, features, tools: toolData };
+    });
+  }
+
+  function getStatus(result) {
+    if (!result) return 'missing';
+    if (result.supported === true || result.supported === 'yes') return 'supported';
+    if (result.opens === false || result.opens === 'no') return 'fails';
+    if (result.opens === true || result.opens === 'yes') return 'ignored';
+    return 'missing';
+  }
+
+  function getViewerUrl(tool, feature, result) {
+    if (result?.viewer_url) return result.viewer_url;
+    if (tool.viewer_url && feature.sample_url) {
+      return tool.viewer_url + feature.sample_url;
+    }
+    return null;
+  }
+</script>
+
+<div class="app">
+  <header class="hero">
+    <p class="eyebrow">OME-NGFF Tools</p>
+    <h1>OME-Zarr Viewer Matrix</h1>
+    <p class="lede">Version-specific support pulled from tool test YAMLs.</p>
+    <div class="version-links">
+      {#each versions as v}
+        <a href="#version-{v.version}" class="chip">{v.version}</a>
+      {/each}
+    </div>
+  </header>
+
+  <main>
+    <div class="legend">
+      <div class="legend-item supported">Supported</div>
+      <div class="legend-item ignored">Opens (no effect)</div>
+      <div class="legend-item fails">Fails to open</div>
+      <div class="legend-item missing">Not tested</div>
+    </div>
+
+    {#if loading}
+      <p>Loading...</p>
+    {:else if error}
+      <p class="error">Error: {error}</p>
+    {:else}
+      {#each versions as v}
+        <section class="version-section" id="version-{v.version}">
+          <h2>OME-Zarr {v.version}</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th class="sticky">Feature</th>
+                  <th>Sample</th>
+                  {#each v.tools as tool}
+                    <th>{tool.name}</th>
+                  {/each}
+                </tr>
+              </thead>
+              <tbody>
+                {#each v.features as feature}
+                  <tr>
+                    <td class="sticky feature-cell">
+                      <span class="feature-name">{feature.name}</span>
+                      {#if feature.description}
+                        <i class="fas fa-info-circle info-icon" title={feature.description}></i>
+                      {/if}
+                    </td>
+                    <td class="sample-cell">
+                      {#if feature.sample_url}
+                        <a href={feature.sample_url} target="_blank">{feature.sample_name || 'Sample'}</a>
+                      {/if}
+                    </td>
+                    {#each v.tools as tool}
+                      {@const result = tool.results[feature.slug]}
+                      {@const status = getStatus(result)}
+                      {@const viewerUrl = getViewerUrl(tool, feature, result)}
+                      <td class={status}>
+                        {#if viewerUrl}
+                          <a href={viewerUrl} target="_blank" class="icon-link" title="Open in viewer">
+                            <i class="fas fa-eye"></i>
+                          </a>
+                        {/if}
+                        {#if result?.issue_url}
+                          <a href={result.issue_url} target="_blank" class="icon-link" title="GitHub issue">
+                            <i class="fab fa-github"></i>
+                          </a>
+                        {/if}
+                      </td>
+                    {/each}
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      {/each}
+    {/if}
+  </main>
+</div>
+
+<style>
+  :global(:root) {
+    --bg: #f6f2ea;
+    --ink: #171717;
+    --muted: #4b5563;
+    --card: #ffffff;
+    --stroke: rgba(17, 24, 39, 0.12);
+    --accent: #0f766e;
+    --supported: #7ac943;
+    --fails: #e24a3b;
+    --ignored: #f2c14e;
+    --missing: #d7d7d7;
+    --font-body: "IBM Plex Sans", sans-serif;
+    --font-display: "Space Grotesk", sans-serif;
+  }
+
+  :global(*) { box-sizing: border-box; }
+  :global(body) {
+    margin: 0;
+    font-family: var(--font-body);
+    color: var(--ink);
+    background: linear-gradient(180deg, #f6f2ea 0%, #fbf9f6 60%, #f6f2ea 100%);
+    min-height: 100vh;
+  }
+
+  .app { min-height: 100vh; }
+
+  .hero {
+    padding: 48px 6vw 32px;
+    border-bottom: 1px solid var(--stroke);
+  }
+  .eyebrow {
+    margin: 0 0 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  .hero h1 {
+    margin: 0 0 8px;
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 4vw, 3rem);
+  }
+  .lede {
+    margin: 0 0 16px;
+    color: var(--muted);
+  }
+  .version-links { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip {
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--stroke);
+    background: white;
+    color: var(--ink);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.85rem;
+  }
+  .chip:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+
+  main { padding: 32px 6vw 56px; }
+
+  .legend {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+  }
+  .legend-item {
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+  .legend-item.supported { background: var(--supported); }
+  .legend-item.ignored { background: var(--ignored); }
+  .legend-item.fails { background: var(--fails); color: white; }
+  .legend-item.missing { background: var(--missing); }
+
+  .version-section {
+    background: rgba(255,255,255,0.85);
+    border: 1px solid var(--stroke);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+  .version-section h2 {
+    margin: 0 0 16px;
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+  }
+
+  .table-wrap {
+    overflow: auto;
+    max-height: 70vh;
+    border-radius: 8px;
+    border: 1px solid var(--stroke);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 600px;
+  }
+  th, td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--stroke);
+    font-size: 0.9rem;
+  }
+  th {
+    background: var(--card);
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    font-weight: 600;
+  }
+  .sticky {
+    position: sticky;
+    left: 0;
+    background: var(--card);
+    z-index: 1;
+    min-width: 200px;
+  }
+  th.sticky { z-index: 3; }
+
+  .feature-cell { display: flex; align-items: center; gap: 6px; }
+  .feature-name { font-weight: 600; }
+  .info-icon { color: var(--muted); cursor: help; font-size: 0.85em; }
+  .sample-cell a { color: var(--ink); }
+
+  td.supported { background: var(--supported); }
+  td.fails { background: var(--fails); }
+  td.ignored { background: var(--ignored); }
+  td.missing { background: var(--missing); }
+
+  .icon-link {
+    color: inherit;
+    opacity: 0.7;
+    margin-right: 6px;
+  }
+  .icon-link:hover { opacity: 1; }
+
+  .error { color: var(--fails); }
+</style>

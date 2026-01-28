@@ -1,73 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>OME-NGFF Tools Matrix</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap"
-    rel="stylesheet" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
-    integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg=="
-    crossorigin="anonymous" referrerpolicy="no-referrer" onerror="console.error('Failed to load FontAwesome CSS');"
-    onload="console.log('FontAwesome CSS loaded successfully');" />
-  <link rel="stylesheet" href="assets/img/style.css" />
-</head>
-
-<body class="matrix-body">
-  <header class="hero">
-    <div class="hero-inner">
-      <div class="hero-copy">
-        <p class="eyebrow">OME-NGFF Tools</p>
-        <h1>OME-Zarr Viewer Matrix</h1>
-        <p class="lede">Version-specific support pulled from tool test YAMLs. Each table reflects a single OME-Zarr
-          schema version.</p>
-        <div id="version-links" class="hero-actions"></div>
-      </div>
-      <div class="hero-stats">
-        <div class="stat-card">
-          <div class="stat-value" id="stat-versions">--</div>
-          <div class="stat-label">Versions</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value" id="stat-tools">--</div>
-          <div class="stat-label">Tools</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value" id="stat-features">--</div>
-          <div class="stat-label">Features</div>
-        </div>
-      </div>
-    </div>
-  </header>
-
-  <main>
-    <section class="legend-panel">
-      <div class="legend-header">
-        <h2>Key</h2>
-        <p>Interpretation of each cell in the matrix.</p>
-      </div>
-      <div class="legend">
-        <div class="legend-item supported">Feature<br>supported</div>
-        <div class="legend-item ignored">Not supported<br>(no effect)</div>
-        <div class="legend-item fails">Image doesn't<br>open correctly</div>
-        <div class="legend-item missing">Not tested /<br>not confirmed</div>
-      </div>
-    </section>
-
-    <p class="status-line" id="status">Loading versioned feature matrix...</p>
-
-    <div id="version-sections" class="version-sections"></div>
-  </main>
-
-  <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
-  <script src="assets/img/script.js"></script>
-  <script>
-    initVersionMatrix();
-  </script>
-</body>
-
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OME-NGFF Tools Matrix</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
 </html>
