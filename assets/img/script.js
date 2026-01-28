@@ -16,17 +16,25 @@ const DEFAULT_TOOL_FILES = [
     "data/tools/a-template.yml"
 ];
 
-// Helper functions for boolean logic
+const RESULT_KEYS = new Set([
+    "supported",
+    "opens",
+    "notes",
+    "issue_url",
+    "viewer_url",
+    "viewer_url_postfix"
+]);
+
 function isTrue(val) {
-    if (typeof val === 'string') {
-        return val.toLowerCase() === 'yes' || val.toLowerCase() === 'true';
+    if (typeof val === "string") {
+        return val.toLowerCase() === "yes" || val.toLowerCase() === "true";
     }
     return val === true;
 }
 
 function isFalse(val) {
-    if (typeof val === 'string') {
-        return val.toLowerCase() === 'no' || val.toLowerCase() === 'false';
+    if (typeof val === "string") {
+        return val.toLowerCase() === "no" || val.toLowerCase() === "false";
     }
     return val === false;
 }
@@ -139,9 +147,9 @@ function normalizeTestWrapper(rawTest) {
 
 function normalizeResults(resultsRaw, features) {
     if (!resultsRaw) return {};
-    let resultsObj = {};
 
     if (Array.isArray(resultsRaw)) {
+        const resultsObj = {};
         let currentFeature = null;
         resultsRaw.forEach((entry) => {
             if (!entry || typeof entry !== "object") return;
@@ -173,6 +181,7 @@ function normalizeResults(resultsRaw, features) {
         return resultsRaw;
     }
 
+    const resultsObj = {};
     resultsKeys.forEach((toolId) => {
         const toolResults = resultsRaw[toolId];
         if (!toolResults || typeof toolResults !== "object") return;
@@ -184,15 +193,6 @@ function normalizeResults(resultsRaw, features) {
 
     return resultsObj;
 }
-
-const RESULT_KEYS = new Set([
-    "supported",
-    "opens",
-    "notes",
-    "issue_url",
-    "viewer_url",
-    "viewer_url_postfix"
-]);
 
 function extractResultFields(source) {
     const result = {};
@@ -380,6 +380,15 @@ function buildVersionFeatureMap(featureList) {
     });
 
     return { versionOrder, versionMap };
+}
+
+async function loadYamlFile(path) {
+    const response = await fetch(path, { cache: "no-store" });
+    if (!response.ok) {
+        throw new Error("Failed to load " + path + ": " + response.statusText);
+    }
+    const text = await response.text();
+    return jsyaml.load(text);
 }
 
 async function loadToolList() {
@@ -615,139 +624,10 @@ function updateStat(id, value) {
     }
 }
 
-async function initVersionMatrix() {
-    const status = document.getElementById("status");
-    const container = document.getElementById("version-sections");
-    if (!status || !container) return;
-
-    status.textContent = "Loading versioned feature matrix...";
-
-    try {
-        const featureList = await loadYamlFile(FEATURES_NEW_FILE);
-
-        const { versionOrder, versionMap } = buildVersionFeatureMap(featureList);
-
-        const toolFiles = await loadToolList();
-        const toolFileData = await loadToolFiles(toolFiles);
-
-        const toolInfoById = new Map();
-        const toolInfoIndex = new Map();
-        const resultsByVersion = new Map();
-        const toolOrder = [];
-        const toolOrderSeen = new Set();
-
-        toolFileData.forEach((toolFile) => {
-            const parsed = parseToolFile(toolFile.raw, toolFile.filePath);
-            if (!parsed) return;
-
-            const derivedId = deriveToolId(parsed.toolInfo, toolFile.filePath);
-            const mergedInfo = mergeToolInfo(parsed.toolInfo, null);
-            const toolId = mergedInfo.id || derivedId;
-            if (!toolId) return;
-
-            mergedInfo.id = toolId;
-            toolInfoById.set(toolId, mergedInfo);
-            toolInfoIndex.set(normalizeKey(toolId), mergedInfo);
-            if (!toolOrderSeen.has(toolId)) {
-                toolOrder.push(toolId);
-                toolOrderSeen.add(toolId);
-            }
-
-            const testInfo = parsed.testInfo || {};
-            Object.entries(testInfo).forEach(([testId, testData]) => {
-                if (!testData || typeof testData !== "object") return;
-                const testNumber = parseTestNumber(testId);
-                const versionBlocks = testData.features || {};
-
-                Object.entries(versionBlocks).forEach(([versionKey, versionBlock]) => {
-                    const version = String(versionKey);
-                    const versionData = versionMap.get(version);
-                    if (!versionData) return;
-
-                    const normalizedBlock = normalizeFeatureResultsBlock(versionBlock);
-                    Object.entries(normalizedBlock).forEach(([featureSlug, result]) => {
-                        const featureEntry = versionData.aliasMap.get(normalizeKey(featureSlug));
-                        if (!featureEntry) return;
-
-                        const versionResults = ensureVersionToolMap(resultsByVersion, version, toolId);
-                        const existing = versionResults.get(featureEntry.slug);
-                        if (!existing || testNumber > existing.testNumber) {
-                            versionResults.set(featureEntry.slug, {
-                                result: result && typeof result === "object" ? result : {},
-                                testNumber,
-                                testMeta: {
-                                    id: testId,
-                                    number: testNumber,
-                                    tool_version: testData.tool_version || null,
-                                    additional_versions: testData.additional_versions || null,
-                                    notes: testData.notes || null,
-                                    source_file: toolFile.filePath || null
-                                }
-                            });
-                        }
-                    });
-                });
-            });
-        });
-
-        const extras = Array.from(toolInfoById.keys()).filter((toolId) => !toolOrderSeen.has(toolId));
-        extras.sort((a, b) => {
-            const aName = (toolInfoById.get(a) || {}).name || a;
-            const bName = (toolInfoById.get(b) || {}).name || b;
-            return aName.localeCompare(bName);
-        });
-        toolOrder.push(...extras);
-        const viewerMap = new Map();
-        toolOrder.forEach((toolId) => {
-            const info = toolInfoById.get(toolId) || { id: toolId };
-            viewerMap.set(toolId, info);
-        });
-
-        populateVersionLinks(versionOrder);
-
-        container.innerHTML = "";
-        const emptyFeatureIndex = new Map();
-        const uniqueFeatures = new Set();
-
-        versionOrder.forEach((version, index) => {
-            const versionData = versionMap.get(version);
-            if (!versionData) return;
-            versionData.features.forEach((feature) => {
-                uniqueFeatures.add(normalizeKey(feature.slug));
-            });
-            const section = createVersionSection(versionData, toolOrder.length);
-            if (index > 0) {
-                section.style.animationDelay = `${index * 0.08}s`;
-            }
-            container.appendChild(section);
-
-            const headerRow = section.querySelector(".matrix-header-row");
-            const tbody = section.querySelector(".matrix-body");
-            buildHeader(toolOrder, viewerMap, toolInfoIndex, headerRow);
-
-            const entries = buildEntriesForVersion(
-                versionData,
-                toolOrder,
-                toolInfoById,
-                resultsByVersion.get(version)
-            );
-            buildRows(entries, toolOrder, viewerMap, emptyFeatureIndex, tbody);
-        });
-
-        updateStat("stat-versions", versionOrder.length);
-        updateStat("stat-tools", toolOrder.length);
-        updateStat("stat-features", uniqueFeatures.size);
-
-        status.textContent = `Loaded ${versionOrder.length} version tables from ${toolOrder.length} tools.`;
-    } catch (error) {
-        console.error(error);
-        status.textContent = "Failed to load versioned matrix. Check console for details.";
-    }
-}
-
 function buildHeader(viewerOrder, viewerMap, toolRefIndex, headerRowOverride) {
     const headerRow = headerRowOverride || document.getElementById("feature-header-row");
-    // Clear existing headers except first two (Feature, Sample Data)
+    if (!headerRow) return;
+
     while (headerRow.children.length > 2) {
         headerRow.removeChild(headerRow.lastChild);
     }
@@ -757,7 +637,7 @@ function buildHeader(viewerOrder, viewerMap, toolRefIndex, headerRowOverride) {
         const th = document.createElement("th");
         if (viewer.widercol) th.classList.add("wider");
 
-        let label = viewer.label || viewer.name || viewer.id;
+        const label = viewer.label || viewer.name || viewer.id;
         th.textContent = label;
 
         const toolInfo = resolveToolInfo(toolRefIndex, viewer.id);
@@ -777,171 +657,198 @@ function buildHeader(viewerOrder, viewerMap, toolRefIndex, headerRowOverride) {
 
 function buildRows(entries, viewerOrder, viewerMap, featureRefIndex, tbodyOverride) {
     const tbody = tbodyOverride || document.getElementById("feature-table-body");
+    if (!tbody) return;
+
     const tooltip = ensureHoverTooltip();
     tbody.innerHTML = "";
 
     entries.forEach((entry) => {
-        const feature = entry.feature || {};
-        const ref = resolveFeatureRef(featureRefIndex, entry.slug, feature.name);
-        const mergedFeature = Object.assign({}, ref || {}, feature || {});
         const tr = document.createElement("tr");
 
-        // Feature Column
-        const featureCell = document.createElement("td");
-        featureCell.classList.add("feature");
+        const rawFeature = entry.feature || {};
+        const mergedFeature = mergeFeatureData(entry.slug, rawFeature, featureRefIndex);
 
-        const featureLabel = document.createElement("div");
-        featureLabel.classList.add("feature-label");
+        tr.appendChild(buildFeatureCell(entry.slug, mergedFeature));
+        tr.appendChild(buildSampleCell(mergedFeature));
 
-        const name = mergedFeature.name || entry.slug;
-        const featureName = document.createElement("span");
-        featureName.classList.add("feature-name");
-        featureName.textContent = name;
-        featureLabel.appendChild(featureName);
-
-        const description = mergedFeature.description;
-        const featureInstructions = normalizeInstructions(
-            mergedFeature.how_to_test || mergedFeature.test_instructions
-        );
-        if (description || featureInstructions) {
-            const infoIcon = document.createElement("i");
-            infoIcon.className = "fas fa-info-circle info-icon";
-            const tooltipParts = [];
-            if (description) tooltipParts.push(description);
-            if (featureInstructions) tooltipParts.push("How to test:\n" + featureInstructions);
-            infoIcon.title = tooltipParts.join("\n\n");
-            featureLabel.appendChild(infoIcon);
-        }
-        featureCell.appendChild(featureLabel);
-        tr.appendChild(featureCell);
-
-        // Sample Data Column
-        const sampleCell = document.createElement("td");
-        sampleCell.classList.add("sample");
-
-        if (mergedFeature.sample_url && mergedFeature.sample_name) {
-            const link = document.createElement("a");
-            link.href = mergedFeature.sample_url;
-            link.target = "_blank";
-            link.innerHTML = '<i class="far fa-file-alt"></i> ' + mergedFeature.sample_name;
-            sampleCell.appendChild(link);
-        } else if (mergedFeature.sample_name) {
-            sampleCell.innerHTML = '<i class="far fa-file-alt"></i> ' + mergedFeature.sample_name;
-        }
-
-        if (mergedFeature.sample_html) {
-            const htmlSpan = document.createElement("span");
-            htmlSpan.innerHTML = " " + mergedFeature.sample_html;
-            sampleCell.appendChild(htmlSpan);
-        }
-        tr.appendChild(sampleCell);
-
-        // Viewer Columns
         viewerOrder.forEach((viewerId) => {
             const viewer = viewerMap.get(viewerId) || { id: viewerId };
             const result = entry.results ? entry.results[viewerId] : null;
-            let cellClass = "missing";
-
-            if (result && typeof result === "object") {
-                const supported = result.supported;
-                const opens = result.opens;
-
-                if (isTrue(supported)) {
-                    cellClass = "supported";
-                } else if (isFalse(opens)) {
-                    cellClass = "fails";
-                } else if (isTrue(opens)) {
-                    cellClass = "ignored";
-                }
-            }
-
-            const cell = document.createElement("td");
-            cell.classList.add(cellClass);
-
-            const iconRow = document.createElement("div");
-            iconRow.className = "icon-row";
-
-            const viewerUrl = result && result.viewer_url ? result.viewer_url : null;
-            const resolvedUrl = viewerUrl || (viewer.viewer_url && feature.sample_url
-                ? viewer.viewer_url + feature.sample_url + (viewer.viewer_url_postfix || "")
-                : null);
-
-            if (resolvedUrl) {
-                const eyeLink = document.createElement("a");
-                eyeLink.href = resolvedUrl;
-                eyeLink.target = "_blank";
-                eyeLink.rel = "noopener";
-                eyeLink.className = "icon-btn";
-                eyeLink.title = "Open in viewer";
-                eyeLink.innerHTML = '<i class="fas fa-eye"></i>';
-                iconRow.appendChild(eyeLink);
-            }
-
-            if (result && result.issue_url) {
-                const ghLink = document.createElement("a");
-                ghLink.href = result.issue_url;
-                ghLink.target = "_blank";
-                ghLink.rel = "noopener";
-                ghLink.className = "icon-btn";
-                ghLink.title = "View Issue";
-                ghLink.innerHTML = '<i class="fab fa-github"></i>';
-                iconRow.appendChild(ghLink);
-            }
-
-            if (result && result.notes) {
-                const notesSpan = document.createElement("span");
-                notesSpan.className = "icon-btn";
-                notesSpan.title = result.notes;
-                notesSpan.innerHTML = '<i class="fas fa-info-circle"></i>';
-                iconRow.appendChild(notesSpan);
-            }
-
-            cell.appendChild(iconRow);
-            tr.appendChild(cell);
-
             const cellMeta = entry.toolMeta ? entry.toolMeta[viewerId] : null;
-            const testMeta = cellMeta && cellMeta.test ? cellMeta.test : null;
-            const hasMeta = Boolean(
-                testMeta && (testMeta.tool_version || testMeta.additional_versions || testMeta.notes)
+
+            tr.appendChild(
+                buildViewerCell({
+                    viewer,
+                    feature: rawFeature,
+                    result,
+                    cellMeta,
+                    tooltip
+                })
             );
-            if (hasMeta) {
-                const infoPayload = { id: viewer.id };
-                if (testMeta.tool_version) infoPayload.version = testMeta.tool_version;
-                if (testMeta.additional_versions) infoPayload.additional_versions = testMeta.additional_versions;
-                if (testMeta.notes) infoPayload.notes = testMeta.notes;
-                const formatted = JSON.stringify(infoPayload, null, 2);
-
-                const infoIcon = document.createElement("span");
-                infoIcon.className = "cell-info-icon";
-                infoIcon.setAttribute("aria-label", "Show tool version details");
-                infoIcon.innerHTML = '<i class="fas fa-question-circle"></i>';
-                iconRow.appendChild(infoIcon);
-
-                infoIcon.addEventListener("mouseenter", (event) => {
-                    updateHoverTooltip(tooltip, formatted);
-                    positionHoverTooltip(tooltip, event.clientX, event.clientY);
-                    tooltip.classList.add("visible");
-                });
-                infoIcon.addEventListener("mousemove", (event) => {
-                    positionHoverTooltip(tooltip, event.clientX, event.clientY);
-                });
-                infoIcon.addEventListener("mouseleave", () => {
-                    tooltip.classList.remove("visible");
-                });
-            }
         });
 
         tbody.appendChild(tr);
     });
 }
 
-async function loadYamlFile(path) {
-    const response = await fetch(path, { cache: "no-store" });
-    if (!response.ok) {
-        throw new Error("Failed to load " + path + ": " + response.statusText);
+function mergeFeatureData(slug, feature, featureRefIndex) {
+    const ref = resolveFeatureRef(featureRefIndex, slug, feature && feature.name);
+    return Object.assign({}, ref || {}, feature || {});
+}
+
+function buildFeatureCell(slug, feature) {
+    const cell = document.createElement("td");
+    cell.classList.add("feature");
+
+    const featureLabel = document.createElement("div");
+    featureLabel.classList.add("feature-label");
+
+    const name = feature.name || slug;
+    const featureName = document.createElement("span");
+    featureName.classList.add("feature-name");
+    featureName.textContent = name;
+    featureLabel.appendChild(featureName);
+
+    const description = feature.description;
+    const featureInstructions = normalizeInstructions(
+        feature.how_to_test || feature.test_instructions
+    );
+    if (description || featureInstructions) {
+        const infoIcon = document.createElement("i");
+        infoIcon.className = "fas fa-info-circle info-icon";
+        const tooltipParts = [];
+        if (description) tooltipParts.push(description);
+        if (featureInstructions) tooltipParts.push("How to test:\n" + featureInstructions);
+        infoIcon.title = tooltipParts.join("\n\n");
+        featureLabel.appendChild(infoIcon);
     }
-    const text = await response.text();
-    return jsyaml.load(text);
+
+    cell.appendChild(featureLabel);
+    return cell;
+}
+
+function buildSampleCell(feature) {
+    const cell = document.createElement("td");
+    cell.classList.add("sample");
+
+    if (feature.sample_url && feature.sample_name) {
+        const link = document.createElement("a");
+        link.href = feature.sample_url;
+        link.target = "_blank";
+        link.innerHTML = '<i class="far fa-file-alt"></i> ' + feature.sample_name;
+        cell.appendChild(link);
+    } else if (feature.sample_name) {
+        cell.innerHTML = '<i class="far fa-file-alt"></i> ' + feature.sample_name;
+    }
+
+    if (feature.sample_html) {
+        const htmlSpan = document.createElement("span");
+        htmlSpan.innerHTML = " " + feature.sample_html;
+        cell.appendChild(htmlSpan);
+    }
+
+    return cell;
+}
+
+function buildViewerCell({ viewer, feature, result, cellMeta, tooltip }) {
+    const cell = document.createElement("td");
+    cell.classList.add(getResultClass(result));
+
+    const iconRow = document.createElement("div");
+    iconRow.className = "icon-row";
+
+    const resolvedUrl = resolveViewerUrl(viewer, feature, result);
+    if (resolvedUrl) {
+        appendIconLink(iconRow, resolvedUrl, "Open in viewer", "fas fa-eye");
+    }
+
+    if (result && result.issue_url) {
+        appendIconLink(iconRow, result.issue_url, "View Issue", "fab fa-github");
+    }
+
+    if (result && result.notes) {
+        const notesSpan = document.createElement("span");
+        notesSpan.className = "icon-btn";
+        notesSpan.title = result.notes;
+        notesSpan.innerHTML = '<i class="fas fa-info-circle"></i>';
+        iconRow.appendChild(notesSpan);
+    }
+
+    const testMeta = cellMeta && cellMeta.test ? cellMeta.test : null;
+    if (testMeta && (testMeta.tool_version || testMeta.additional_versions || testMeta.notes)) {
+        const infoPayload = { id: viewer.id };
+        if (testMeta.tool_version) infoPayload.version = testMeta.tool_version;
+        if (testMeta.additional_versions) {
+            infoPayload.additional_versions = testMeta.additional_versions;
+        }
+        if (testMeta.notes) infoPayload.notes = testMeta.notes;
+
+        const infoIcon = document.createElement("span");
+        infoIcon.className = "cell-info-icon";
+        infoIcon.setAttribute("aria-label", "Show tool version details");
+        infoIcon.innerHTML = '<i class="fas fa-question-circle"></i>';
+        iconRow.appendChild(infoIcon);
+
+        attachTooltipHandlers(infoIcon, tooltip, JSON.stringify(infoPayload, null, 2));
+    }
+
+    cell.appendChild(iconRow);
+    return cell;
+}
+
+function getResultClass(result) {
+    if (result && typeof result === "object") {
+        const supported = result.supported;
+        const opens = result.opens;
+
+        if (isTrue(supported)) {
+            return "supported";
+        }
+        if (isFalse(opens)) {
+            return "fails";
+        }
+        if (isTrue(opens)) {
+            return "ignored";
+        }
+    }
+
+    return "missing";
+}
+
+function resolveViewerUrl(viewer, feature, result) {
+    const viewerUrl = result && result.viewer_url ? result.viewer_url : null;
+    if (viewerUrl) return viewerUrl;
+
+    if (viewer.viewer_url && feature.sample_url) {
+        return viewer.viewer_url + feature.sample_url + (viewer.viewer_url_postfix || "");
+    }
+
+    return null;
+}
+
+function appendIconLink(container, href, title, iconClass) {
+    const link = document.createElement("a");
+    link.href = href;
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.className = "icon-btn";
+    link.title = title;
+    link.innerHTML = `<i class="${iconClass}"></i>`;
+    container.appendChild(link);
+}
+
+function attachTooltipHandlers(target, tooltip, text) {
+    target.addEventListener("mouseenter", (event) => {
+        updateHoverTooltip(tooltip, text);
+        positionHoverTooltip(tooltip, event.clientX, event.clientY);
+        tooltip.classList.add("visible");
+    });
+    target.addEventListener("mousemove", (event) => {
+        positionHoverTooltip(tooltip, event.clientX, event.clientY);
+    });
+    target.addEventListener("mouseleave", () => {
+        tooltip.classList.remove("visible");
+    });
 }
 
 async function loadViewers() {
@@ -1025,16 +932,17 @@ function parseDateInfo(dateRaw, fileName) {
 }
 
 function aggregateTestResults(testData) {
-    // 1. Sort testData by date (newest first)
-    const sortedTests = testData.map(item => {
-        const testWrapper = normalizeTestWrapper(item.raw);
-        const dateInfo = parseDateInfo(testWrapper ? testWrapper.date : null, item.fileName);
-        return { ...item, dayStamp: dateInfo.dayStamp, testWrapper };
-    }).sort((a, b) => b.dayStamp - a.dayStamp); // Descending order
+    const sortedTests = testData
+        .map((item) => {
+            const testWrapper = normalizeTestWrapper(item.raw);
+            const dateInfo = parseDateInfo(testWrapper ? testWrapper.date : null, item.fileName);
+            return { ...item, dayStamp: dateInfo.dayStamp, testWrapper };
+        })
+        .sort((a, b) => b.dayStamp - a.dayStamp);
 
     const featureMap = new Map();
 
-    sortedTests.forEach(testItem => {
+    sortedTests.forEach((testItem) => {
         const testWrapper = testItem.testWrapper;
         if (!testWrapper) return;
 
@@ -1042,10 +950,9 @@ function aggregateTestResults(testData) {
         const results = normalizeResults(testWrapper.results, features);
         const tools = testWrapper.tools || {};
 
-        // Get all feature keys from this test
         const featureKeys = new Set([...Object.keys(features), ...Object.keys(results)]);
 
-        featureKeys.forEach(slug => {
+        featureKeys.forEach((slug) => {
             if (!featureMap.has(slug)) {
                 featureMap.set(slug, {
                     slug,
@@ -1057,16 +964,14 @@ function aggregateTestResults(testData) {
 
             const aggregatedEntry = featureMap.get(slug);
 
-            // Update feature info if not present (or maybe overwrite with newest?)
-            // Let's assume newest feature info is best, but usually it's static.
             if (!aggregatedEntry.feature.description && features[slug] && features[slug].description) {
                 aggregatedEntry.feature = features[slug];
             }
 
             const testResults = results[slug] || {};
 
-            Object.keys(testResults).forEach(toolId => {
-                // Only set if not already set (since we iterate newest to oldest)
+            Object.keys(testResults).forEach((toolId) => {
+                // Newest tests are iterated first, so only set if missing.
                 if (!aggregatedEntry.results[toolId]) {
                     aggregatedEntry.results[toolId] = testResults[toolId];
                     if (!aggregatedEntry.toolMeta[toolId]) {
@@ -1136,4 +1041,155 @@ function positionHoverTooltip(tooltip, clientX, clientY) {
 
     tooltip.style.left = `${Math.max(padding, left)}px`;
     tooltip.style.top = `${Math.max(padding, top)}px`;
+}
+
+function collectToolData(toolFileData, versionMap) {
+    const toolInfoById = new Map();
+    const toolInfoIndex = new Map();
+    const resultsByVersion = new Map();
+    const toolOrder = [];
+    const toolOrderSeen = new Set();
+
+    toolFileData.forEach((toolFile) => {
+        const parsed = parseToolFile(toolFile.raw, toolFile.filePath);
+        if (!parsed) return;
+
+        const derivedId = deriveToolId(parsed.toolInfo, toolFile.filePath);
+        const mergedInfo = mergeToolInfo(parsed.toolInfo, null);
+        const toolId = mergedInfo.id || derivedId;
+        if (!toolId) return;
+
+        mergedInfo.id = toolId;
+        toolInfoById.set(toolId, mergedInfo);
+        toolInfoIndex.set(normalizeKey(toolId), mergedInfo);
+
+        if (!toolOrderSeen.has(toolId)) {
+            toolOrder.push(toolId);
+            toolOrderSeen.add(toolId);
+        }
+
+        const testInfo = parsed.testInfo || {};
+        Object.entries(testInfo).forEach(([testId, testData]) => {
+            if (!testData || typeof testData !== "object") return;
+            const testNumber = parseTestNumber(testId);
+            const versionBlocks = testData.features || {};
+
+            Object.entries(versionBlocks).forEach(([versionKey, versionBlock]) => {
+                const version = String(versionKey);
+                const versionData = versionMap.get(version);
+                if (!versionData) return;
+
+                const normalizedBlock = normalizeFeatureResultsBlock(versionBlock);
+                Object.entries(normalizedBlock).forEach(([featureSlug, result]) => {
+                    const featureEntry = versionData.aliasMap.get(normalizeKey(featureSlug));
+                    if (!featureEntry) return;
+
+                    const versionResults = ensureVersionToolMap(resultsByVersion, version, toolId);
+                    const existing = versionResults.get(featureEntry.slug);
+                    if (!existing || testNumber > existing.testNumber) {
+                        versionResults.set(featureEntry.slug, {
+                            result: result && typeof result === "object" ? result : {},
+                            testNumber,
+                            testMeta: {
+                                id: testId,
+                                number: testNumber,
+                                tool_version: testData.tool_version || null,
+                                additional_versions: testData.additional_versions || null,
+                                notes: testData.notes || null,
+                                source_file: toolFile.filePath || null
+                            }
+                        });
+                    }
+                });
+            });
+        });
+    });
+
+    return { toolInfoById, toolInfoIndex, resultsByVersion, toolOrder, toolOrderSeen };
+}
+
+function finalizeToolOrder(toolInfoById, toolOrder, toolOrderSeen) {
+    const extras = Array.from(toolInfoById.keys()).filter((toolId) => !toolOrderSeen.has(toolId));
+    extras.sort((a, b) => {
+        const aName = (toolInfoById.get(a) || {}).name || a;
+        const bName = (toolInfoById.get(b) || {}).name || b;
+        return aName.localeCompare(bName);
+    });
+    toolOrder.push(...extras);
+    return toolOrder;
+}
+
+function buildViewerMap(toolOrder, toolInfoById) {
+    const viewerMap = new Map();
+    toolOrder.forEach((toolId) => {
+        const info = toolInfoById.get(toolId) || { id: toolId };
+        viewerMap.set(toolId, info);
+    });
+    return viewerMap;
+}
+
+async function initVersionMatrix() {
+    const status = document.getElementById("status");
+    const container = document.getElementById("version-sections");
+    if (!status || !container) return;
+
+    status.textContent = "Loading versioned feature matrix...";
+
+    try {
+        const featureList = await loadYamlFile(FEATURES_NEW_FILE);
+        const { versionOrder, versionMap } = buildVersionFeatureMap(featureList);
+
+        const toolFiles = await loadToolList();
+        const toolFileData = await loadToolFiles(toolFiles);
+
+        const toolState = collectToolData(toolFileData, versionMap);
+        const toolOrder = finalizeToolOrder(
+            toolState.toolInfoById,
+            toolState.toolOrder,
+            toolState.toolOrderSeen
+        );
+        const viewerMap = buildViewerMap(toolOrder, toolState.toolInfoById);
+
+        populateVersionLinks(versionOrder);
+
+        container.innerHTML = "";
+        const emptyFeatureIndex = new Map();
+        const uniqueFeatures = new Set();
+
+        versionOrder.forEach((version, index) => {
+            const versionData = versionMap.get(version);
+            if (!versionData) return;
+
+            versionData.features.forEach((feature) => {
+                uniqueFeatures.add(normalizeKey(feature.slug));
+            });
+
+            const section = createVersionSection(versionData, toolOrder.length);
+            if (index > 0) {
+                section.style.animationDelay = `${index * 0.08}s`;
+            }
+            container.appendChild(section);
+
+            const headerRow = section.querySelector(".matrix-header-row");
+            const tbody = section.querySelector(".matrix-body");
+            buildHeader(toolOrder, viewerMap, toolState.toolInfoIndex, headerRow);
+
+            const entries = buildEntriesForVersion(
+                versionData,
+                toolOrder,
+                toolState.toolInfoById,
+                toolState.resultsByVersion.get(version)
+            );
+            buildRows(entries, toolOrder, viewerMap, emptyFeatureIndex, tbody);
+        });
+
+        updateStat("stat-versions", versionOrder.length);
+        updateStat("stat-tools", toolOrder.length);
+        updateStat("stat-features", uniqueFeatures.size);
+
+        status.textContent = `Loaded ${versionOrder.length} version tables from ${toolOrder.length} tools.`;
+    } catch (error) {
+        console.error(error);
+        status.textContent = "Failed to load versioned matrix. Check console for details.";
+    }
 }
