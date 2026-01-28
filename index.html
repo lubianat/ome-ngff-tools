@@ -1,164 +1,73 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>OME-NGFF Tools Matrix</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" onerror="console.error('Failed to load FontAwesome CSS');" onload="console.log('FontAwesome CSS loaded successfully');" />
-  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg=="
+    crossorigin="anonymous" referrerpolicy="no-referrer" onerror="console.error('Failed to load FontAwesome CSS');"
+    onload="console.log('FontAwesome CSS loaded successfully');" />
+  <link rel="stylesheet" href="assets/img/style.css" />
 </head>
-<body>
-  <header>
-    <h1>OME-NGFF Viewer Matrix</h1>
-    <p>Latest results from individual test YAML files.</p>
+
+<body class="matrix-body">
+  <header class="hero">
+    <div class="hero-inner">
+      <div class="hero-copy">
+        <p class="eyebrow">OME-NGFF Tools</p>
+        <h1>OME-Zarr Viewer Matrix</h1>
+        <p class="lede">Version-specific support pulled from tool test YAMLs. Each table reflects a single OME-Zarr
+          schema version.</p>
+        <div id="version-links" class="hero-actions"></div>
+      </div>
+      <div class="hero-stats">
+        <div class="stat-card">
+          <div class="stat-value" id="stat-versions">--</div>
+          <div class="stat-label">Versions</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-tools">--</div>
+          <div class="stat-label">Tools</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-features">--</div>
+          <div class="stat-label">Features</div>
+        </div>
+      </div>
+    </div>
   </header>
 
   <main>
-    <h3>Key</h3>
-    <div class="legend">
-      <div class="legend-item supported">Feature<br>supported</div>
-      <div class="legend-item ignored">Not supported<br>(no effect)</div>
-      <div class="legend-item fails">Image doesn't<br>open correctly</div>
-      <div class="legend-item missing">Not tested /<br>not confirmed</div>
-    </div>
-
-    <p class="status-line" id="status">Loading tests...</p>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr id="feature-header-row">
-            <th class="feature">Feature</th>
-            <th class="sample">Sample data</th>
-          </tr>
-        </thead>
-        <tbody id="feature-table-body"></tbody>
-      </table>
-    </div>
-
-    <section class="test-jump" aria-label="Individual test reports">
-      <div class="test-jump-title">Individual tests</div>
-      <div class="test-jump-controls">
-        <label for="test-jump-select">Open report:</label>
-        <select id="test-jump-select">
-          <option value="">-- Choose a test file --</option>
-        </select>
-        <a id="test-jump-link" class="button-link disabled" href="test_report.html">View test report</a>
+    <section class="legend-panel">
+      <div class="legend-header">
+        <h2>Key</h2>
+        <p>Interpretation of each cell in the matrix.</p>
+      </div>
+      <div class="legend">
+        <div class="legend-item supported">Feature<br>supported</div>
+        <div class="legend-item ignored">Not supported<br>(no effect)</div>
+        <div class="legend-item fails">Image doesn't<br>open correctly</div>
+        <div class="legend-item missing">Not tested /<br>not confirmed</div>
       </div>
     </section>
+
+    <p class="status-line" id="status">Loading versioned feature matrix...</p>
+
+    <div id="version-sections" class="version-sections"></div>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
-  <script src="script.js"></script>
+  <script src="assets/img/script.js"></script>
   <script>
-    const state = {
-      featureEntries: [],
-      viewerOrder: [],
-      viewerMap: new Map(),
-      featureRefIndex: new Map(),
-      toolRefIndex: new Map()
-    };
-
-    function isNewerTest(candidate, current) {
-      // This function is no longer needed with the new aggregation logic
-      return false; 
-    }
-
-    async function main() {
-      console.log("Starting main function...");
-      const status = document.getElementById("status");
-      try {
-        console.log("Loading viewers...");
-        const viewerData = await loadViewers();
-        console.log("Viewers loaded:", viewerData);
-        const viewers = normalizeViewerList(viewerData);
-
-        const [featureRefRaw, toolRefRaw] = await Promise.all([
-          loadFeatureRef(),
-          loadToolRef()
-        ]);
-        state.featureRefIndex = buildFeatureRefIndex(featureRefRaw);
-        state.toolRefIndex = buildToolRefIndex(toolRefRaw);
-
-        viewers.forEach((viewer) => {
-          if (!viewer || !viewer.id) return;
-          state.viewerMap.set(viewer.id, viewer);
-          state.viewerOrder.push(viewer.id);
-        });
-
-        const testList = await loadTests();
-        console.log("Test list loaded:", testList);
-        const testData = [];
-        for (const file of testList) {
-          logDebug("Loading test file", file);
-          try {
-            const raw = await loadYamlFile(file);
-            testData.push({ fileName: file.split("/").pop(), raw });
-          } catch (e) {
-            console.error("Failed to load test file:", file, e);
-          }
-        }
-
-        // Use new aggregation logic
-        state.featureEntries = aggregateTestResults(testData);
-
-        // Collect all viewers from aggregated results to ensure we have them all
-        // (Though we likely got them from loadViewers + testData scan inside aggregateTestResults if we wanted, 
-        // but here we just rely on what we have + what aggregateTestResults found? 
-        // Actually aggregateTestResults returns entries. We need to make sure state.viewerMap has all tools.)
-        
-        state.featureEntries.forEach(entry => {
-             const results = entry.results || {};
-             Object.keys(results).forEach(toolId => {
-                if (!state.viewerMap.has(toolId)) {
-                  state.viewerMap.set(toolId, { id: toolId });
-                  state.viewerOrder.push(toolId);
-                }
-             });
-        });
-
-        logDebug("Viewer order", state.viewerOrder);
-        logDebug("Feature entries", state.featureEntries);
-
-        console.log("Building header...");
-        buildHeader(state.viewerOrder, state.viewerMap, state.toolRefIndex);
-        console.log("Building rows...");
-        buildRows(state.featureEntries, state.viewerOrder, state.viewerMap, state.featureRefIndex);
-        console.log("Table built successfully.");
-
-        status.textContent = "Loaded " + state.featureEntries.length + " features from " + testData.length + " tests.";
-
-        const testSelect = document.getElementById("test-jump-select");
-        const testLink = document.getElementById("test-jump-link");
-        if (testSelect && testLink) {
-          testList.forEach((file) => {
-            const option = document.createElement("option");
-            option.value = file;
-            option.textContent = file;
-            testSelect.appendChild(option);
-          });
-
-          const updateLink = () => {
-            const file = testSelect.value;
-            if (file) {
-              testLink.href = "test_report.html?test=" + encodeURIComponent(file);
-              testLink.classList.remove("disabled");
-            } else {
-              testLink.href = "test_report.html";
-              testLink.classList.add("disabled");
-            }
-          };
-
-          testSelect.addEventListener("change", updateLink);
-          updateLink();
-        }
-
-      } catch (error) {
-        console.error(error);
-        status.textContent = "Failed to load tests. Check console for details.";
-      }
-    }
-
-    main();
+    initVersionMatrix();
   </script>
 </body>
+
 </html>
