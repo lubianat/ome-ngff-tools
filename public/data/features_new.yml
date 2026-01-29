@@ -1,15 +1,18 @@
-- name: Z downsample
-  slug: z_downsample
-  description: Does the viewer handle image pyramids which have been down-sampled in the Z axis?
+- name: basic display
+  slug: basic_display
+  description: Does the viewer open the file and display a correct image?
+  definition_of_support: |
+    The viewer opens the file and displays the image in a minimally correct way. 
+    The image should be viewable and not contain clear errors in metadata or display.
   versions: # The OME-Zarr version tested
-    0.4:
-      - sample_url: https://minio-dev.openmicroscopy.org/idr/v0.4/idr0077/9836832_z_dtype_fix.zarr
-      - sample_name: 9836832.zarr
+    0.5:
+      - sample_url: https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.5/idr0062A/6001240_labels.zarr
+      - sample_name: 6001240_labels.zarr
 
 - name: omero info
   slug: omero_info
   description: "Does the viewer use the 'omero' metadata to set channel colors, names and rendering levels?"
-  definition_of_supported: >
+  definition_of_support: |
     The viewer uses the 'omero' metadata to set channel colors, names and rendering levels.
     For the dataset 6001240.zarr,  "LaminB1" channel is blue and "Dapi" channel is yellow.
   versions:

@@ -7,6 +7,13 @@ tool_info:
 
     [https://kitware.github.io/itk-vtk-viewer/app/?rotate=false&fileToLoad=https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0062A/6001240.zarr](https://kitware.github.io/itk-vtk-viewer/app/?rotate=false&fileToLoad=https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0062A/6001240.zarr)
 test_info:
+  test-2:
+    date: 2026-01-29
+    features:
+      0.5:
+        basic_display:
+          opens: no
+          notes: 404 looking for .zattrs
   test-1:
     features:
       0.3:

@@ -8,6 +8,14 @@ tool_info:
 
     `https://neuroglancer-demo.appspot.com/#!{"layers":[{"source":"zarr://https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0062A/6001240.zarr","name":"OME-NGFF"}]}`
 test_info:
+  test-4:
+    date: 2026-01-29
+    features:
+      0.5:
+        basic_display:
+          supported: yes
+          opens: yes
+          notes: Seems to not support the `omero` metadata in 0.5.
   test-3:
     date: 2026-01-29
     features:

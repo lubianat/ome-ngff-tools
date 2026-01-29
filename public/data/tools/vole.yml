@@ -7,6 +7,13 @@ tool_info:
 
     [https://volumeviewer.allencell.org/viewer?url=https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0062A/6001240.zarr](https://volumeviewer.allencell.org/viewer?url=https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0062A/6001240.zarr)
 test_info:
+  test-3:
+    date: 2026-01-29
+    features:
+      0.5:
+        basic_display:
+          supported: yes
+          opens: yes
   test-2:
     date: 2026-01-29
     features:
