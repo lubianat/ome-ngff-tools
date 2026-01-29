@@ -6,6 +6,13 @@ tool_info:
   test_instructions: >
     Open via URL, example: https://neuroglancer-demo.appspot.com/#!{"layers":[{"source":"zarr://https://example.org/data.zarr","name":"OME-NGFF"}]}
 test_info:
+  test-3:
+    date: 2026-01-29
+    features:
+      0.4:
+        omero_info:
+          supported: yes
+          opens: yes
   test-2:
     features:
       0.3:

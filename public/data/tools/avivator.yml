@@ -3,8 +3,15 @@ tool_info:
   id: avivator
   viewer_url: https://avivator.gehlenborglab.org/?image_url=
   test_instructions: >
-    Open via URL, example: https://avivator.gehlenborglab.org/?image_url=https://example.org/data.zarr
+    Open via URL, example:https://avivator.gehlenborglab.org/?image_url=https://example.org/data.zarr
 test_info:
+  test-2:
+    date: 2026-01-29
+    features:
+      0.4:
+        omero_info:
+          supported: yes
+          opens: yes
   test-1:
     features:
       0.3:

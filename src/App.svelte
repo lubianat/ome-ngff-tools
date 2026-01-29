@@ -111,11 +111,14 @@
           if (versionBlock) {
             Object.entries(versionBlock).forEach(([slug, result]) => {
               // Store result with test metadata
+              const dateVal = test.date;
+              const dateStr = dateVal instanceof Date ? dateVal.toISOString().slice(0, 10) : dateVal;
               results[slug] = {
                 ...result,
                 _testId: testKey,
                 _toolVersion: test.tool_version,
                 _additionalVersions: test.additional_versions,
+                _date: dateStr,
               };
             });
           }
@@ -325,6 +328,13 @@
           <div class="modal-row">
             <strong>Test ID:</strong>
             <span>{selectedCell.result._testId}</span>
+          </div>
+        {/if}
+
+        {#if selectedCell.result._date}
+          <div class="modal-row">
+            <strong>Date:</strong>
+            <span>{selectedCell.result._date}</span>
           </div>
         {/if}
 

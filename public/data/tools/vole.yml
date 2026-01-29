@@ -5,6 +5,13 @@ tool_info:
   test_instructions: >
     Open via URL, example: https://volumeviewer.allencell.org/viewer?url=https://example.org/data.zarr
 test_info:
+  test-2:
+    date: 2026-01-29
+    features:
+      0.4:
+        omero_info:
+          supported: yes
+          opens: yes
   test-1:
     features:
       0.3:

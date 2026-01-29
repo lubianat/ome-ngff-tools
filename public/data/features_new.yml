@@ -9,6 +9,9 @@
 - name: omero info
   slug: omero_info
   description: "Does the viewer use the 'omero' metadata to set channel colors, names and rendering levels?"
+  definition_of_supported: >
+    The viewer uses the 'omero' metadata to set channel colors, names and rendering levels.
+    For the dataset 6001240.zarr,  "LaminB1" channel is blue and "Dapi" channel is yellow.
   versions:
     0.4:
       - sample_url: https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0062A/6001240.zarr
