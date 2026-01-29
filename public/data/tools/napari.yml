@@ -1,11 +1,11 @@
 tool_info:
   name: napari
   id: napari
-  test_instructions: >
+  test_instructions: |
     Open via command line, for example: 
-    * napari https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0062A/6001240.zarr
+    * `napari https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0062A/6001240.zarr`
     Use napari console to open additional image: 
-    * viewer.open("https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0101A/13457537.zarr", plugin="napari-ome-zarr")
+    * `viewer.open("https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0101A/13457537.zarr", plugin="napari-ome-zarr")`
 test_info:
   test-1:
     tool_version: 0.5.6

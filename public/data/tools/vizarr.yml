@@ -2,8 +2,10 @@ tool_info:
   name: vizarr
   id: vizarr
   viewer_url: https://hms-dbmi.github.io/vizarr/?source=
-  test_instructions: >
-    Open via URL, example: https://hms-dbmi.github.io/vizarr/?source=https://example.org/data.zarr
+  test_instructions: |
+    Open via URL, example:
+
+    [https://hms-dbmi.github.io/vizarr/?source=https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0062A/6001240.zarr](https://hms-dbmi.github.io/vizarr/?source=https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0062A/6001240.zarr)
 test_info:
   test-1:
     tool_version: "April 2025"

@@ -2,8 +2,10 @@ tool_info:
   name: avivator
   id: avivator
   viewer_url: https://avivator.gehlenborglab.org/?image_url=
-  test_instructions: >
-    Open via URL, example:https://avivator.gehlenborglab.org/?image_url=https://example.org/data.zarr
+  test_instructions: |
+    Open via URL, example:
+
+    [https://avivator.gehlenborglab.org/?image_url=https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0062A/6001240.zarr](https://avivator.gehlenborglab.org/?image_url=https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0062A/6001240.zarr)
 test_info:
   test-2:
     date: 2026-01-29

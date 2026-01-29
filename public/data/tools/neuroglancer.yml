@@ -3,8 +3,10 @@ tool_info:
   id: neuroglancer
   viewer_url: 'https://neuroglancer-demo.appspot.com/#!{"layers":[{"source":"zarr://'
   viewer_url_postfix: '","name":"OME-NGFF"}]}'
-  test_instructions: >
-    Open via URL, example: https://neuroglancer-demo.appspot.com/#!{"layers":[{"source":"zarr://https://example.org/data.zarr","name":"OME-NGFF"}]}
+  test_instructions: |
+    Open via URL. Copy and paste this example into your browser:
+
+    `https://neuroglancer-demo.appspot.com/#!{"layers":[{"source":"zarr://https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0062A/6001240.zarr","name":"OME-NGFF"}]}`
 test_info:
   test-3:
     date: 2026-01-29
