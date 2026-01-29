@@ -9,6 +9,14 @@
       - sample_url: https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.5/idr0062A/6001240_labels.zarr
       - sample_name: 6001240_labels.zarr
 
+- name: Z downsample
+  slug: z_downsample
+  description: Does the viewer handle image pyramids which have been down-sampled in the Z axis?
+  versions: # The OME-Zarr version tested
+    0.4:
+      - sample_url: https://minio-dev.openmicroscopy.org/idr/v0.4/idr0077/9836832_z_dtype_fix.zarr
+      - sample_name: 9836832.zarr
+
 - name: omero info
   slug: omero_info
   description: "Does the viewer use the 'omero' metadata to set channel colors, names and rendering levels?"
