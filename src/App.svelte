@@ -28,6 +28,15 @@
     }
   }
 
+  function getFeatureInfoContent(feature) {
+    let content = feature.description || "";
+    if (feature.definition_of_support) {
+      content +=
+        "\n\n**Definition of support:**\n\n" + feature.definition_of_support;
+    }
+    return content;
+  }
+
   function closeInfo() {
     selectedInfo = null;
   }
@@ -103,6 +112,8 @@
             slug: f.slug,
             name: vData.name || f.name,
             description: vData.description || f.description,
+            definition_of_support:
+              vData.definition_of_support || f.definition_of_support,
             sample_url: vData.sample_url || f.sample_url,
             sample_name: vData.sample_name || f.sample_name,
           };
@@ -249,18 +260,26 @@
                 {#each v.features as feature}
                   <tr>
                     <td
-                      class="sticky {feature.description ? 'clickable' : ''}"
+                      class="sticky {feature.description ||
+                      feature.definition_of_support
+                        ? 'clickable'
+                        : ''}"
                       on:click={() =>
-                        openInfo(feature.name, feature.description)}
+                        openInfo(feature.name, getFeatureInfoContent(feature))}
                       on:keydown={(e) =>
                         e.key === "Enter" &&
-                        openInfo(feature.name, feature.description)}
-                      tabindex={feature.description ? 0 : -1}
-                      role={feature.description ? "button" : undefined}
+                        openInfo(feature.name, getFeatureInfoContent(feature))}
+                      tabindex={feature.description ||
+                      feature.definition_of_support
+                        ? 0
+                        : -1}
+                      role={feature.description || feature.definition_of_support
+                        ? "button"
+                        : undefined}
                     >
                       <div class="feature-cell">
                         <span class="feature-name">{feature.name}</span>
-                        {#if feature.description}
+                        {#if feature.description || feature.definition_of_support}
                           <i class="fas fa-info-circle info-icon"></i>
                         {/if}
                       </div>
