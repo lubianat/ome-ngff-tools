@@ -112,7 +112,10 @@
             Object.entries(versionBlock).forEach(([slug, result]) => {
               // Store result with test metadata
               const dateVal = test.date;
-              const dateStr = dateVal instanceof Date ? dateVal.toISOString().slice(0, 10) : dateVal;
+              const dateStr =
+                dateVal instanceof Date
+                  ? dateVal.toISOString().slice(0, 10)
+                  : dateVal;
               results[slug] = {
                 ...result,
                 _testId: testKey,
@@ -128,6 +131,7 @@
           id: tool.id,
           name: info.name || info.label || tool.id,
           viewer_url: info.viewer_url,
+          viewer_url_postfix: info.viewer_url_postfix,
           test_instructions: info.test_instructions,
           results,
         };
@@ -149,7 +153,9 @@
   function getViewerUrl(tool, feature, result) {
     if (result?.viewer_url) return result.viewer_url;
     if (tool.viewer_url && feature.sample_url) {
-      return tool.viewer_url + feature.sample_url;
+      return (
+        tool.viewer_url + feature.sample_url + (tool.viewer_url_postfix || "")
+      );
     }
     return null;
   }
