@@ -219,14 +219,16 @@
               <tbody>
                 {#each v.features as feature}
                   <tr>
-                    <td class="sticky feature-cell">
-                      <span class="feature-name">{feature.name}</span>
-                      {#if feature.description}
-                        <i
-                          class="fas fa-info-circle info-icon"
-                          title={feature.description}
-                        ></i>
-                      {/if}
+                    <td class="sticky">
+                      <div class="feature-cell">
+                        <span class="feature-name">{feature.name}</span>
+                        {#if feature.description}
+                          <i
+                            class="fas fa-info-circle info-icon"
+                            title={feature.description}
+                          ></i>
+                        {/if}
+                      </div>
                     </td>
                     <td class="sample-cell">
                       {#if feature.sample_url}
