@@ -32,21 +32,28 @@
       const indexRes = await fetch(withBase("data/tools/index.json"));
       const toolFiles = await indexRes.json();
 
-      const tools = [];
-      for (const file of toolFiles) {
-        try {
-          const cleanPath = file.replace(/^\/+/, "");
-          const res = await fetch(withBase(cleanPath));
-          const raw = yaml.load(await res.text());
-          const id = file
-            .split("/")
-            .pop()
-            .replace(/\.ya?ml$/i, "");
-          tools.push({ id, raw });
-        } catch (e) {
-          console.warn("Failed to load", file);
-        }
-      }
+      // Load all tool files in parallel
+      const toolFilePromises = toolFiles.map((file) => {
+        return (async () => {
+          try {
+            const cleanPath = file.replace(/^\/+/, "");
+            const res = await fetch(withBase(cleanPath));
+            const raw = yaml.load(await res.text());
+            const id = file
+              .split("/")
+              .pop()
+              .replace(/\.ya?ml$/i, "");
+            return { id, raw };
+          } catch (e) {
+            console.warn("Failed to load", file);
+            return null;
+          }
+        })();
+      });
+
+      const tools = (await Promise.all(toolFilePromises)).filter(
+        (tool) => tool !== null,
+      );
 
       // Build version data
       versions = buildMatrix(featureList, tools);
