@@ -1,6 +1,7 @@
 <script>
   import { onMount } from "svelte";
   import yaml from "js-yaml";
+  import snarkdown from "snarkdown";
 
   let loading = true;
   let error = null;
@@ -8,6 +9,8 @@
 
   // Modal state for cell details
   let selectedCell = null;
+  // Modal state for info popup (tools or features)
+  let selectedInfo = null;
 
   function openCellDetails(tool, feature, result) {
     if (result) {
@@ -17,6 +20,16 @@
 
   function closeCellDetails() {
     selectedCell = null;
+  }
+
+  function openInfo(title, content) {
+    if (content) {
+      selectedInfo = { title, content };
+    }
+  }
+
+  function closeInfo() {
+    selectedInfo = null;
   }
 
   onMount(async () => {
@@ -168,8 +181,9 @@
   }
 
   function handleKeydown(e) {
-    if (e.key === "Escape" && selectedCell) {
-      closeCellDetails();
+    if (e.key === "Escape") {
+      if (selectedCell) closeCellDetails();
+      if (selectedInfo) closeInfo();
     }
   }
 </script>
@@ -211,13 +225,21 @@
                   <th class="sticky">Feature</th>
                   <th>Sample</th>
                   {#each v.tools as tool}
-                    <th class="tool-header">
+                    <th
+                      class="tool-header {tool.test_instructions
+                        ? 'clickable'
+                        : ''}"
+                      on:click={() =>
+                        openInfo(tool.name, tool.test_instructions)}
+                      on:keydown={(e) =>
+                        e.key === "Enter" &&
+                        openInfo(tool.name, tool.test_instructions)}
+                      tabindex={tool.test_instructions ? 0 : -1}
+                      role={tool.test_instructions ? "button" : undefined}
+                    >
                       <span>{tool.name}</span>
                       {#if tool.test_instructions}
-                        <i
-                          class="fas fa-question-circle tool-info-icon"
-                          title={tool.test_instructions}
-                        ></i>
+                        <i class="fas fa-question-circle info-icon"></i>
                       {/if}
                     </th>
                   {/each}
@@ -226,14 +248,20 @@
               <tbody>
                 {#each v.features as feature}
                   <tr>
-                    <td class="sticky">
+                    <td
+                      class="sticky {feature.description ? 'clickable' : ''}"
+                      on:click={() =>
+                        openInfo(feature.name, feature.description)}
+                      on:keydown={(e) =>
+                        e.key === "Enter" &&
+                        openInfo(feature.name, feature.description)}
+                      tabindex={feature.description ? 0 : -1}
+                      role={feature.description ? "button" : undefined}
+                    >
                       <div class="feature-cell">
                         <span class="feature-name">{feature.name}</span>
                         {#if feature.description}
-                          <i
-                            class="fas fa-info-circle info-icon"
-                            title={feature.description}
-                          ></i>
+                          <i class="fas fa-info-circle info-icon"></i>
                         {/if}
                       </div>
                     </td>
@@ -368,6 +396,24 @@
             >
           </div>
         {/if}
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Info Modal (for tools and features) -->
+{#if selectedInfo}
+  <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-noninteractive-element-interactions -->
+  <div class="modal-overlay" role="presentation" on:click={closeInfo}>
+    <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+    <div class="modal" on:click|stopPropagation role="dialog" aria-modal="true">
+      <button class="modal-close" on:click={closeInfo} aria-label="Close">
+        <i class="fas fa-times"></i>
+      </button>
+      <h3>{selectedInfo.title}</h3>
+
+      <div class="modal-content">
+        <p class="notes-text">{@html snarkdown(selectedInfo.content)}</p>
       </div>
     </div>
   </div>
@@ -565,21 +611,12 @@
     color: var(--fails);
   }
 
-  /* Tool header with info icon */
+  /* Tool header */
   .tool-header {
     white-space: nowrap;
   }
   .tool-header span {
     margin-right: 4px;
-  }
-  .tool-info-icon {
-    color: var(--muted);
-    cursor: help;
-    font-size: 0.8em;
-    opacity: 0.7;
-  }
-  .tool-info-icon:hover {
-    opacity: 1;
   }
 
   /* Notes icon in cells */
@@ -590,11 +627,11 @@
     font-size: 0.85em;
   }
 
-  /* Clickable cells */
-  td.clickable {
+  /* Clickable cells and headers */
+  .clickable {
     cursor: pointer;
   }
-  td.clickable:hover {
+  .clickable:hover {
     filter: brightness(0.95);
   }
 
@@ -696,5 +733,33 @@
     background: rgba(0, 0, 0, 0.03);
     padding: 8px 12px;
     border-radius: 6px;
+  }
+  .notes-text :global(a) {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+  .notes-text :global(a:hover) {
+    opacity: 0.8;
+  }
+  .notes-text :global(code) {
+    background: rgba(0, 0, 0, 0.06);
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-family: monospace;
+    font-size: 0.85em;
+  }
+  .notes-text :global(ul),
+  .notes-text :global(ol) {
+    margin: 8px 0;
+    padding-left: 20px;
+  }
+  .notes-text :global(li) {
+    margin: 4px 0;
+  }
+  .notes-text :global(strong) {
+    font-weight: 700;
+  }
+  .notes-text :global(em) {
+    font-style: italic;
   }
 </style>
