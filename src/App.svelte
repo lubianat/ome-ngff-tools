@@ -6,6 +6,17 @@
   let loading = true;
   let error = null;
   let versions = [];
+  let matrices = {};
+  let classOptions = [];
+  let activeClass = "viewer";
+  let activeLabel = "Viewers";
+  let activeToolCount = 0;
+
+  const CLASS_LABELS = {
+    viewer: "Viewers",
+    reader_and_writer: "Readers & Writers",
+  };
+  const CLASS_KEYS = ["viewer", "reader_and_writer"];
 
   // Modal state for cell details
   let selectedCell = null;
@@ -41,27 +52,76 @@
     selectedInfo = null;
   }
 
+  function featureAppliesTo(feature, toolClass) {
+    if (!feature.applies_to) return true;
+    if (Array.isArray(feature.applies_to)) {
+      return feature.applies_to.includes(toolClass);
+    }
+    return feature.applies_to === toolClass;
+  }
+
+  function updateClassInUrl(key) {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    url.searchParams.set("class", key);
+    window.history.replaceState({}, "", url);
+  }
+
+  function setActiveClass(key, { updateUrl = true } = {}) {
+    if (!matrices[key]) return;
+    activeClass = key;
+    activeLabel = CLASS_LABELS[key] || key;
+    versions = matrices[key].versions || [];
+    activeToolCount = matrices[key].toolsCount || 0;
+    selectedCell = null;
+    selectedInfo = null;
+    if (updateUrl) updateClassInUrl(key);
+  }
+
   onMount(async () => {
     try {
       const base = import.meta.env.BASE_URL || "/";
       const withBase = (path) => `${base}${path}`;
 
-      // Load features
-      const featuresRes = await fetch(withBase("data/features_new.yml"));
-      const featureList = yaml.load(await featuresRes.text());
+      const [featuresRes, toolClassRes] = await Promise.all([
+        fetch(withBase("data/features.yml")),
+        fetch(withBase("data/tool_classes.yml")),
+      ]);
+      const featureList = yaml.load(await featuresRes.text()) || [];
+      const rawToolClasses = yaml.load(await toolClassRes.text()) || {};
+      const toolClasses = {
+        viewer: Array.isArray(rawToolClasses.viewer)
+          ? rawToolClasses.viewer
+          : [],
+        reader_and_writer: Array.isArray(rawToolClasses.reader_and_writer)
+          ? rawToolClasses.reader_and_writer
+          : [],
+      };
 
-      // Load tool index and tool files
-      const indexRes = await fetch(withBase("data/tools/index.json"));
-      const toolFiles = await indexRes.json();
+      const toolIds = Array.from(
+        new Set([...toolClasses.viewer, ...toolClasses.reader_and_writer]),
+      ).filter(Boolean);
 
-      // Load all tool files in parallel
+      let toolFiles = toolIds.map((id) => `data/tools/${id}.yml`);
+      if (toolFiles.length === 0) {
+        const indexRes = await fetch(withBase("data/tools/index.json"));
+        const indexFiles = await indexRes.json();
+        toolFiles = indexFiles;
+        toolClasses.viewer = indexFiles.map((file) =>
+          file
+            .split("/")
+            .pop()
+            .replace(/\.ya?ml$/i, ""),
+        );
+      }
+
       const toolFilePromises = toolFiles.map((file) => {
         return (async () => {
           try {
             const cleanPath = file.replace(/^\/+/, "");
             const res = await fetch(withBase(cleanPath));
             const raw = yaml.load(await res.text());
-            const id = file
+            const id = cleanPath
               .split("/")
               .pop()
               .replace(/\.ya?ml$/i, "");
@@ -76,9 +136,50 @@
       const tools = (await Promise.all(toolFilePromises)).filter(
         (tool) => tool !== null,
       );
+      const toolsById = tools.reduce((acc, tool) => {
+        acc[tool.id] = tool;
+        return acc;
+      }, {});
 
-      // Build version data
-      versions = buildMatrix(featureList, tools);
+      matrices = CLASS_KEYS.reduce((acc, toolClass) => {
+        const ids = toolClasses[toolClass] || [];
+        const filteredFeatures = featureList.filter((feature) =>
+          featureAppliesTo(feature, toolClass),
+        );
+        const classTools = (ids || [])
+          .map((id) => toolsById[id])
+          .filter(Boolean);
+        acc[toolClass] = {
+          versions: buildMatrix(filteredFeatures, classTools),
+          toolsCount: classTools.length,
+          featureCount: filteredFeatures.length,
+        };
+        return acc;
+      }, {});
+
+      classOptions = CLASS_KEYS.filter(
+        (key) =>
+          matrices[key]?.toolsCount > 0 || matrices[key]?.featureCount > 0,
+      ).map((key) => ({
+        key,
+        label: CLASS_LABELS[key] || key,
+      }));
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const requestedClass = urlParams.get("class");
+      const hasRequested = classOptions.some(
+        (option) => option.key === requestedClass,
+      );
+      const defaultClass =
+        (hasRequested && requestedClass) || classOptions[0]?.key;
+
+      if (defaultClass) {
+        setActiveClass(defaultClass, { updateUrl: false });
+      } else {
+        versions = [];
+        activeToolCount = 0;
+      }
+
       loading = false;
     } catch (e) {
       error = e.message;
@@ -86,7 +187,7 @@
     }
   });
 
-  function buildMatrix(featureList, tools) {
+  function buildMatrix(featureList = [], tools = []) {
     // Collect all versions from features
     const versionSet = new Set();
     featureList.forEach((f) => {
@@ -204,13 +305,29 @@
 <div class="app">
   <header class="hero">
     <p class="eyebrow">OME-NGFF Tools</p>
-    <h1>OME-Zarr Viewer Matrix</h1>
+    <h1>OME-Zarr {activeLabel} Matrix</h1>
     <p class="lede">Version-specific support pulled from tool test YAMLs.</p>
-    <div class="version-links">
-      {#each versions as v}
-        <a href="#version-{v.version}" class="chip">{v.version}</a>
-      {/each}
-    </div>
+    {#if classOptions.length > 1}
+      <div class="class-toggle" role="group" aria-label="Tool classes">
+        {#each classOptions as option}
+          <button
+            type="button"
+            class:active={activeClass === option.key}
+            on:click={() => setActiveClass(option.key)}
+            aria-pressed={activeClass === option.key}
+          >
+            {option.label}
+          </button>
+        {/each}
+      </div>
+    {/if}
+    {#if versions.length}
+      <div class="version-links">
+        {#each versions as v}
+          <a href="#version-{v.version}" class="chip">{v.version}</a>
+        {/each}
+      </div>
+    {/if}
   </header>
 
   <main>
@@ -225,7 +342,14 @@
       <p>Loading...</p>
     {:else if error}
       <p class="error">Error: {error}</p>
+    {:else if !versions.length}
+      <p class="empty">
+        No feature data available for {activeLabel} yet.
+      </p>
     {:else}
+      {#if activeToolCount === 0}
+        <p class="empty">No tools registered for {activeLabel} yet.</p>
+      {/if}
       {#each versions as v}
         <section class="version-section" id="version-{v.version}">
           <h2>OME-Zarr {v.version}</h2>
@@ -493,6 +617,7 @@
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
+    margin-top: 12px;
   }
   .chip {
     padding: 6px 12px;
@@ -506,6 +631,34 @@
   }
   .chip:hover {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .class-toggle {
+    display: inline-flex;
+    gap: 6px;
+    padding: 6px;
+    border-radius: 999px;
+    border: 1px solid var(--stroke);
+    background: var(--card);
+    margin: 8px 0 0;
+  }
+  .class-toggle button {
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--ink);
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+  .class-toggle button.active {
+    background: var(--accent);
+    color: white;
+  }
+  .class-toggle button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
 
   main {
@@ -628,6 +781,11 @@
 
   .error {
     color: var(--fails);
+  }
+  .empty {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin-top: 12px;
   }
 
   /* Tool header */

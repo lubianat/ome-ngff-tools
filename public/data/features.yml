@@ -1,5 +1,29 @@
+- name: some compatibility
+  slug: some_compatibility
+  applies_to: reader_and_writer
+  description: Does the tool documentation state some (read or write) compatibility with this OME-Zarr version?
+  definition_of_support: |
+    Some tool documentation (e.g., README, website) explicitly states at some basic compatibility with the given OME-Zarr version.
+  versions: # The OME-Zarr version tested
+    0.5:
+      - sample_url: https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.5/idr0062A/6001240_labels.zarr
+      - sample_name: 6001240_labels.zarr
+    0.4:
+      - sample_url: https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0062A/6001240.zarr
+      - sample_name: 6001240.zarr
+    0.3:
+      - sample_url: https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.2/6001240.zarr
+      - sample_name: 6001240.zarr
+    0.2:
+      - sample_url: https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.2/6001240.zarr
+      - sample_name: 6001240.zarr
+    0.1:
+      - sample_url: https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.1/plates/1751.zarr
+      - sample_name: 1751.zarr
+
 - name: basic display
   slug: basic_display
+  applies_to: viewer
   description: Does the viewer open the file and display a correct image?
   definition_of_support: |
     The viewer opens the file and displays the image in a minimally correct way. 
@@ -11,6 +35,7 @@
 
 - name: Z downsample
   slug: z_downsample
+  applies_to: viewer
   description: Does the viewer handle image pyramids which have been down-sampled in the Z axis?
   versions: # The OME-Zarr version tested
     0.4:
@@ -19,6 +44,7 @@
 
 - name: omero info
   slug: omero_info
+  applies_to: viewer
   description: "Does the viewer use the 'omero' metadata to set channel colors, names and rendering levels?"
   definition_of_support: |
     The viewer uses the 'omero' metadata to set channel colors, names and rendering levels.
@@ -30,6 +56,7 @@
 
 - name: multiscales downsampling not=2
   slug: multiscales_downsampling_not_2
+  applies_to: viewer
   description: Can the viewer handle pyramids when the scale factor between levels is not equal to 2?
   versions:
     0.4:
@@ -38,6 +65,7 @@
 
 - name: axes support
   slug: axes_support
+  applies_to: viewer
   description: "Are the axes names respected? Are 'z', 'c' & 't' axes handled correctly?"
   versions:
     0.3:
@@ -51,6 +79,7 @@
 
 - name: labels
   slug: labels
+  applies_to: viewer
   description: Does the viewer read and display labels nested within the image container?
   versions:
     0.4:
@@ -59,6 +88,7 @@
 
 - name: HCS plate
   slug: hcs_plate
+  applies_to: viewer
   description: Does the viewer display an OME-NGFF plate?
   versions:
     0.4:
@@ -67,6 +97,7 @@
 
 - name: bioformats2raw.layout
   slug: bioformats2raw_layout
+  applies_to: viewer
   description: Does the viewer handled a Fileset of images contained within a bioformats2raw.layout wrapper?
   versions:
     0.4:
@@ -76,6 +107,7 @@
 
 - name: "multiple 'multiscales'"
   slug: multiple_multiscales
+  applies_to: viewer
   description: "Does the viewer open any images beyond the first item in the 'multiscales' list?"
   versions:
     0.4:
@@ -84,6 +116,7 @@
 
 - name: scale within coordinateTransformations on datasets (v0.4)
   slug: scale_within_coordinate_transformations_on_datasets_v0_4
+  applies_to: viewer
   description: "Does the viewer read the 'scale' transformation for each item in `datasets` list, show pixel size or scalebar?"
   versions:
     0.4:
@@ -92,6 +125,7 @@
 
 - name: translation within coordinateTransformations on datasets (v0.4)
   slug: translation_within_coordinate_transformations_on_datasets_v0_4
+  applies_to: viewer
   description: "Does the viewer read the 'translation' transformation for each item in `datasets` list?"
   versions:
     0.4:
@@ -101,6 +135,7 @@
 
 - name: scale within coordinateTransformations on multiscales (v0.4)
   slug: scale_within_coordinate_transformations_on_multiscales_v0_4
+  applies_to: viewer
   description: "Does the viewer read the 'scale' transformation for each item in `multiscales` list?"
   versions:
     0.4:
@@ -109,6 +144,7 @@
 
 - name: translation within coordinateTransformations on multiscales (v0.4)
   slug: translation_within_coordinate_transformations_on_multiscales_v0_4
+  applies_to: viewer
   description: "Does the viewer read the 'translation' transformation for each item in `multiscales` list?"
   versions:
     0.4:
@@ -118,10 +154,12 @@
 
 - name: overlay multiple images
   slug: overlay_multiple_images
+  applies_to: viewer
   description: Is it possible to open more than 1 OME-NGFF image on the same canvas, to overlay them?
 
 - name: multiple Channels
   slug: multiple_channels
+  applies_to: viewer
   description: Does the viewer support viewing of multiple Channels?
   versions:
     0.4:
@@ -130,6 +168,7 @@
 
 - name: multiple Time-points
   slug: multiple_time_points
+  applies_to: viewer
   description: Does the viewer support viewing of multiple Time-points?
   versions:
     0.4:
