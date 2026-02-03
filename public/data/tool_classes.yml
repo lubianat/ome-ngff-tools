@@ -14,3 +14,4 @@ reader_and_writer:
   - ome-zarr-py
   - ngio
   - ngff-zarr
+  - bioio-ome-zarr
